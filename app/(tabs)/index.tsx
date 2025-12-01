@@ -31,7 +31,7 @@ export default function HomeScreen() {
           Welcome to Foodiez
         </ThemedText>
         <ThemedText style={styles.subtitle}>
-          Your favorite food delivery app
+          Your recipe and ingredient companion
         </ThemedText>
 
         <ThemedView style={styles.buttonContainer}>
