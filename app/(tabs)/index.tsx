@@ -19,48 +19,39 @@ export default function HomeScreen() {
       style={styles.container}
       resizeMode="cover"
     >
+      <View style={styles.overlay} />
       <View style={styles.content}>
         <View style={styles.logoContainer}>
           <Image
-            source={require("@/assets/images/logo.png")}
+            source={require("@/assets/images/logo2.png")}
             style={styles.logo}
             contentFit="contain"
           />
         </View>
         <ThemedText type="title" style={styles.title}>
-          Welcome to Foodiez
+          Welcome to DishDash
         </ThemedText>
         <ThemedText style={styles.subtitle}>
           Your recipe and ingredient companion
         </ThemedText>
 
-        <ThemedView style={styles.buttonContainer}>
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[
-              styles.button,
-              styles.primaryButton,
-              { backgroundColor: tintColor },
-            ]}
+            style={styles.primaryButton}
             onPress={() => router.push("/sign-in")}
+            activeOpacity={0.8}
           >
             <ThemedText style={styles.primaryButtonText}>Sign In</ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.button,
-              styles.secondaryButton,
-              { borderColor: tintColor },
-            ]}
+            style={styles.secondaryButton}
             onPress={() => router.push("/sign-up")}
+            activeOpacity={0.8}
           >
-            <ThemedText
-              style={[styles.secondaryButtonText, { color: tintColor }]}
-            >
-              Sign Up
-            </ThemedText>
+            <ThemedText style={styles.secondaryButtonText}>Sign Up</ThemedText>
           </TouchableOpacity>
-        </ThemedView>
+        </View>
       </View>
     </ImageBackground>
   );
@@ -69,6 +60,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
   content: {
     flex: 1,
@@ -78,13 +75,13 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   logoContainer: {
-    width: 300,
-    height: 300,
-    borderRadius: 150,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
     backgroundColor: "#83ab64",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: -70,
+    marginBottom: 40,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -95,43 +92,69 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   logo: {
-    width: 270,
-    height: 270,
+    width: 260,
+    height: 260,
   },
   title: {
-    marginBottom: 12,
+    marginBottom: 20,
+    opacity: 0.7,
     textAlign: "center",
+    color: "#080808",
   },
   subtitle: {
     marginBottom: 40,
     textAlign: "center",
     opacity: 0.7,
     fontSize: 16,
+    color: "#080808",
   },
   buttonContainer: {
     width: "100%",
     gap: 16,
-  },
-  button: {
-    borderRadius: 8,
-    padding: 16,
-    alignItems: "center",
-    width: "100%",
+    paddingHorizontal: 24,
   },
   primaryButton: {
-    // backgroundColor set dynamically
+    backgroundColor: "#83ab64",
+    borderRadius: 12,
+    padding: 18,
+    alignItems: "center",
+    width: "100%",
+    shadowColor: "#83ab64",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   primaryButtonText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   secondaryButton: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 18,
+    alignItems: "center",
+    width: "100%",
     borderWidth: 2,
-    backgroundColor: "transparent",
+    borderColor: "#83ab64",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    color: "#83ab64",
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 });
