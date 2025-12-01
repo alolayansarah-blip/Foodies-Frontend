@@ -27,6 +27,10 @@ const MAPPING = {
   'camera.fill': 'camera-alt',
   'photo.fill': 'photo-camera',
   'pencil.fill': 'edit',
+  'magnifyingglass': 'search',
+  'magnifyingglass.fill': 'search',
+  'xmark.circle.fill': 'cancel',
+  'star.fill': 'star',
 } as IconMapping;
 
 /**
