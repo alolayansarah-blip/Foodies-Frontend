@@ -1,19 +1,19 @@
+import { SearchSkeleton } from "@/components/skeleton";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { useState } from "react";
 import {
-  StyleSheet,
+  ImageBackground,
   ScrollView,
+  StyleSheet,
   TextInput,
   TouchableOpacity,
   View,
-  ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { SearchSkeleton } from "@/components/skeleton";
-import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 
 // Mock recipes for grid view
 const mockExploreRecipes = [
@@ -51,7 +51,12 @@ export default function SearchScreen() {
   const borderColor = useThemeColor({}, "icon");
   const tintColor = "#83ab64";
 
-  const categories: CategoryType[] = ["All", "Recipes", "Ingredients", "Categories"];
+  const categories: CategoryType[] = [
+    "All",
+    "Recipes",
+    "Ingredients",
+    "Categories",
+  ];
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -111,7 +116,11 @@ export default function SearchScreen() {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={clearSearch}>
-                  <IconSymbol name="xmark.circle.fill" size={20} color={iconColor} />
+                  <IconSymbol
+                    name="xmark.circle.fill"
+                    size={20}
+                    color={iconColor}
+                  />
                 </TouchableOpacity>
               )}
             </View>
@@ -126,7 +135,11 @@ export default function SearchScreen() {
             >
               {searchResults.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                  <IconSymbol name="magnifyingglass" size={60} color={iconColor} />
+                  <IconSymbol
+                    name="magnifyingglass"
+                    size={60}
+                    color={iconColor}
+                  />
                   <ThemedText type="subtitle" style={styles.emptyText}>
                     No results found
                   </ThemedText>
@@ -136,16 +149,26 @@ export default function SearchScreen() {
                 </View>
               ) : (
                 <View style={styles.resultsContainer}>
-                  <ThemedText type="defaultSemiBold" style={styles.resultsHeader}>
-                    {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} found
+                  <ThemedText
+                    type="defaultSemiBold"
+                    style={styles.resultsHeader}
+                  >
+                    {searchResults.length} result
+                    {searchResults.length !== 1 ? "s" : ""} found
                   </ThemedText>
                   {searchResults.map((recipe) => (
                     <TouchableOpacity
                       key={recipe.id}
-                      style={[styles.resultItem, { borderBottomColor: borderColor }]}
+                      style={[
+                        styles.resultItem,
+                        { borderBottomColor: borderColor },
+                      ]}
                     >
                       <View style={styles.resultContent}>
-                        <ThemedText type="defaultSemiBold" style={styles.resultName}>
+                        <ThemedText
+                          type="defaultSemiBold"
+                          style={styles.resultName}
+                        >
                           {recipe.name}
                         </ThemedText>
                         <View style={styles.resultMeta}>
@@ -153,14 +176,24 @@ export default function SearchScreen() {
                             {recipe.category}
                           </ThemedText>
                           <View style={styles.ratingContainer}>
-                            <IconSymbol name="star.fill" size={14} color={tintColor} />
-                            <ThemedText style={[styles.rating, { color: tintColor }]}>
+                            <IconSymbol
+                              name="star.fill"
+                              size={14}
+                              color={tintColor}
+                            />
+                            <ThemedText
+                              style={[styles.rating, { color: tintColor }]}
+                            >
                               {recipe.rating}
                             </ThemedText>
                           </View>
                         </View>
                       </View>
-                      <IconSymbol name="chevron.right" size={20} color={iconColor} />
+                      <IconSymbol
+                        name="chevron.right"
+                        size={20}
+                        color={iconColor}
+                      />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -191,7 +224,8 @@ export default function SearchScreen() {
                     <ThemedText
                       style={[
                         styles.categoryText,
-                        activeCategory === category && styles.activeCategoryText,
+                        activeCategory === category &&
+                          styles.activeCategoryText,
                       ]}
                     >
                       {category}
@@ -213,10 +247,17 @@ export default function SearchScreen() {
                         {recipe.image ? (
                           <View style={styles.recipeImagePlaceholder} />
                         ) : (
-                          <IconSymbol name="book.fill" size={30} color={iconColor} />
+                          <IconSymbol
+                            name="book.fill"
+                            size={30}
+                            color={iconColor}
+                          />
                         )}
                       </ThemedView>
-                      <ThemedText style={styles.recipeCardName} numberOfLines={1}>
+                      <ThemedText
+                        style={styles.recipeCardName}
+                        numberOfLines={1}
+                      >
                         {recipe.name}
                       </ThemedText>
                     </TouchableOpacity>

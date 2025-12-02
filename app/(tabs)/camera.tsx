@@ -31,7 +31,7 @@ const categories = [
 ];
 
 // Replace with your actual API base URL
-const API_BASE_URL = "https://your-api-url.com"; // TODO: Replace with actual API URL
+const API_BASE_URL = "http://134.122.96.197:3000";
 
 export default function CameraScreen() {
   const { addRecipe } = useRecipes();
