@@ -24,6 +24,8 @@ import Animated, {
   withSpring,
   interpolate,
 } from "react-native-reanimated";
+import { PageSkeleton } from "@/components/skeleton";
+import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 
 export default function HomeScreen() {
   const [email, setEmail] = useState("");
@@ -41,6 +43,8 @@ export default function HomeScreen() {
   const icon3Rotation = useSharedValue(0);
   const icon4Rotation = useSharedValue(0);
   const buttonScale = useSharedValue(1);
+
+  const isLoading = useNavigationLoading();
 
   useEffect(() => {
     // Pulsing logo animation
@@ -125,6 +129,19 @@ export default function HomeScreen() {
     });
     handleSignIn();
   };
+
+  if (isLoading) {
+    return (
+      <ImageBackground
+        source={require("@/assets/images/background.png")}
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <View style={styles.overlay} />
+        <PageSkeleton />
+      </ImageBackground>
+    );
+  }
 
   return (
     <ImageBackground
