@@ -5,13 +5,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ImageBackground,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Ionicons } from "@expo/vector-icons";
 import { SearchSkeleton } from "@/components/skeleton";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 
@@ -45,11 +42,7 @@ export default function SearchScreen() {
   const [searchResults, setSearchResults] = useState<typeof mockRecipes>([]);
   const [activeCategory, setActiveCategory] = useState<CategoryType>("All");
   const isLoading = useNavigationLoading();
-
-  const textColor = useThemeColor({}, "text");
-  const iconColor = useThemeColor({}, "icon");
-  const borderColor = useThemeColor({}, "icon");
-  const tintColor = "#83ab64";
+  const insets = useSafeAreaInsets();
 
   const categories: CategoryType[] = ["All", "Recipes", "Ingredients", "Categories"];
 
@@ -74,36 +67,33 @@ export default function SearchScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground
-        source={require("@/assets/images/background.png")}
-        style={styles.container}
-        resizeMode="cover"
-      >
-        <View style={styles.overlay} />
+      <View style={styles.container}>
         <SearchSkeleton />
-      </ImageBackground>
+      </View>
     );
   }
 
   const isSearching = searchQuery.length > 0;
 
   return (
-    <ImageBackground
-      source={require("@/assets/images/background.png")}
-      style={styles.container}
-      resizeMode="cover"
-    >
-      <View style={styles.overlay} />
+    <View style={styles.container}>
+      {/* Creative Background Elements */}
+      <View style={styles.backgroundElements}>
+        <View style={styles.circle1} />
+        <View style={styles.circle2} />
+        <View style={styles.circle3} />
+      </View>
+
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingTop: insets.top + 10 }]}>
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchBar}>
-              <IconSymbol name="magnifyingglass" size={20} color={iconColor} />
+              <Ionicons name="search-outline" size={20} color="rgba(255, 255, 255, 0.8)" />
               <TextInput
-                style={[styles.searchInput, { color: textColor }]}
-                placeholder="Search"
-                placeholderTextColor={iconColor}
+                style={styles.searchInput}
+                placeholder="Search recipes..."
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
                 value={searchQuery}
                 onChangeText={handleSearch}
                 autoCapitalize="none"
@@ -111,7 +101,7 @@ export default function SearchScreen() {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={clearSearch}>
-                  <IconSymbol name="xmark.circle.fill" size={20} color={iconColor} />
+                  <Ionicons name="close-circle" size={20} color="rgba(255, 255, 255, 0.7)" />
                 </TouchableOpacity>
               )}
             </View>
@@ -126,8 +116,8 @@ export default function SearchScreen() {
             >
               {searchResults.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                  <IconSymbol name="magnifyingglass" size={60} color={iconColor} />
-                  <ThemedText type="subtitle" style={styles.emptyText}>
+                  <Ionicons name="search-outline" size={60} color="rgba(255, 255, 255, 0.6)" />
+                  <ThemedText style={styles.emptyText}>
                     No results found
                   </ThemedText>
                   <ThemedText style={styles.emptySubtext}>
@@ -136,16 +126,16 @@ export default function SearchScreen() {
                 </View>
               ) : (
                 <View style={styles.resultsContainer}>
-                  <ThemedText type="defaultSemiBold" style={styles.resultsHeader}>
+                  <ThemedText style={styles.resultsHeader}>
                     {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} found
                   </ThemedText>
                   {searchResults.map((recipe) => (
                     <TouchableOpacity
                       key={recipe.id}
-                      style={[styles.resultItem, { borderBottomColor: borderColor }]}
+                      style={styles.resultItem}
                     >
                       <View style={styles.resultContent}>
-                        <ThemedText type="defaultSemiBold" style={styles.resultName}>
+                        <ThemedText style={styles.resultName}>
                           {recipe.name}
                         </ThemedText>
                         <View style={styles.resultMeta}>
@@ -153,14 +143,14 @@ export default function SearchScreen() {
                             {recipe.category}
                           </ThemedText>
                           <View style={styles.ratingContainer}>
-                            <IconSymbol name="star.fill" size={14} color={tintColor} />
-                            <ThemedText style={[styles.rating, { color: tintColor }]}>
+                            <Ionicons name="star" size={14} color="#ffa500" />
+                            <ThemedText style={styles.rating}>
                               {recipe.rating}
                             </ThemedText>
                           </View>
                         </View>
                       </View>
-                      <IconSymbol name="chevron.right" size={20} color={iconColor} />
+                      <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.7)" />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -182,10 +172,7 @@ export default function SearchScreen() {
                     onPress={() => setActiveCategory(category)}
                     style={[
                       styles.categoryTab,
-                      activeCategory === category && [
-                        styles.activeCategoryTab,
-                        { backgroundColor: tintColor },
-                      ],
+                      activeCategory === category && styles.activeCategoryTab,
                     ]}
                   >
                     <ThemedText
@@ -209,13 +196,13 @@ export default function SearchScreen() {
                 <View style={styles.recipeGrid}>
                   {mockExploreRecipes.map((recipe) => (
                     <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
-                      <ThemedView style={styles.recipeImageContainer}>
+                      <View style={styles.recipeImageContainer}>
                         {recipe.image ? (
                           <View style={styles.recipeImagePlaceholder} />
                         ) : (
-                          <IconSymbol name="book.fill" size={30} color={iconColor} />
+                          <Ionicons name="restaurant-outline" size={30} color="rgba(255, 255, 255, 0.7)" />
                         )}
-                      </ThemedView>
+                      </View>
                       <ThemedText style={styles.recipeCardName} numberOfLines={1}>
                         {recipe.name}
                       </ThemedText>
@@ -227,43 +214,74 @@ export default function SearchScreen() {
           )}
         </View>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#1a4d2e", // Dark forest green
+    position: "relative",
+  },
+  backgroundElements: {
+    position: "absolute",
     width: "100%",
     height: "100%",
+    top: 0,
+    left: 0,
+    zIndex: 0,
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  circle1: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    top: -50,
+    right: -50,
+  },
+  circle2: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    bottom: 100,
+    left: -30,
+  },
+  circle3: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(255, 255, 255, 0.025)",
+    top: "40%",
+    right: 20,
   },
   content: {
     flex: 1,
-    backgroundColor: "transparent",
+    zIndex: 1,
   },
   searchContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "transparent",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.1)",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.25)",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
+    color: "#fff",
   },
   scrollView: {
     flex: 1,
@@ -281,67 +299,72 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 16,
     marginBottom: 8,
-    color: "#080808",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#fff",
+    opacity: 0.9,
   },
   emptySubtext: {
     opacity: 0.7,
     fontSize: 14,
     textAlign: "center",
     paddingHorizontal: 48,
-    color: "#080808",
+    color: "rgba(255, 255, 255, 0.8)",
   },
   resultsContainer: {
     paddingHorizontal: 16,
-    backgroundColor: "transparent",
   },
   resultsHeader: {
     fontSize: 16,
     marginBottom: 16,
-    opacity: 0.7,
-    color: "#080808",
+    opacity: 0.9,
+    color: "#fff",
     paddingHorizontal: 8,
+    fontWeight: "600",
   },
   resultItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   resultContent: {
     flex: 1,
-    backgroundColor: "transparent",
   },
   resultName: {
     fontSize: 16,
     marginBottom: 4,
-    color: "#080808",
+    color: "#fff",
+    fontWeight: "600",
   },
   resultMeta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "transparent",
   },
   resultCategory: {
     fontSize: 14,
-    opacity: 0.7,
-    color: "#080808",
+    opacity: 0.8,
+    color: "rgba(255, 255, 255, 0.9)",
   },
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "transparent",
   },
   rating: {
     fontSize: 14,
     fontWeight: "600",
+    color: "#fff",
   },
   exploreContainer: {
     flex: 1,
-    backgroundColor: "transparent",
   },
   categoryScroll: {
     maxHeight: 60,
@@ -355,22 +378,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.3)",
     marginRight: 8,
     minHeight: 40,
     justifyContent: "center",
   },
   activeCategoryTab: {
-    backgroundColor: "#83ab64",
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    borderColor: "rgba(255, 255, 255, 0.5)",
   },
   categoryText: {
     fontSize: 14,
-    color: "#080808",
+    color: "#fff",
     fontWeight: "500",
+    opacity: 0.9,
   },
   activeCategoryText: {
     color: "#fff",
     fontWeight: "600",
+    opacity: 1,
   },
   gridContent: {
     paddingBottom: 24,
@@ -388,18 +416,18 @@ const styles = StyleSheet.create({
   recipeImageContainer: {
     width: "100%",
     height: "100%",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.1)",
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   recipeImagePlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 8,
   },
   recipeCardName: {
     position: "absolute",
@@ -407,11 +435,12 @@ const styles = StyleSheet.create({
     left: 4,
     right: 4,
     fontSize: 10,
-    color: "#080808",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    color: "#fff",
+    backgroundColor: "rgba(26, 77, 46, 0.8)",
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
     textAlign: "center",
+    fontWeight: "600",
   },
 });

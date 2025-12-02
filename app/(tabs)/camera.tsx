@@ -6,56 +6,55 @@ import {
   View,
   Alert,
   Platform,
-  ImageBackground,
   TextInput,
   Modal,
   KeyboardAvoidingView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRecipes } from "@/contexts/RecipesContext";
 
-// Mock categories - replace with actual API call to fetch categories
-const categories = [
-  { id: "60d5ec49f1b2c72b8c8e4f1b", name: "Italian" },
-  { id: "60d5ec49f1b2c72b8c8e4f2c", name: "Dessert" },
-  { id: "60d5ec49f1b2c72b8c8e4f3d", name: "Seafood" },
-  { id: "60d5ec49f1b2c72b8c8e4f4e", name: "Vegetarian" },
-  { id: "60d5ec49f1b2c72b8c8e4f5f", name: "Meat" },
-  { id: "60d5ec49f1b2c72b8c8e4f6a", name: "Salad" },
+// Default categories matching index.tsx
+const defaultCategories = [
+  { id: "2", name: "Breakfast", icon: "coffee" },
+  { id: "3", name: "Lunch", icon: "bowl-mix" },
+  { id: "4", name: "Dinner", icon: "silverware-fork-knife" },
+  { id: "5", name: "Dessert", icon: "cupcake" },
+  { id: "6", name: "Snacks", icon: "cookie" },
+  { id: "7", name: "Vegetarian", icon: "leaf" },
+  { id: "8", name: "Vegan", icon: "sprout" },
 ];
 
-// Replace with your actual API base URL
-const API_BASE_URL = "https://your-api-url.com"; // TODO: Replace with actual API URL
+const difficultyOptions = ["Easy", "Medium", "Hard"];
 
 export default function CameraScreen() {
   const { addRecipe } = useRecipes();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [currentImageUri, setCurrentImageUri] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    user_id: "60d5ec49f1b2c72b8c8e4f1a", // TODO: Get from auth context
-    category_id: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categories] = useState(defaultCategories);
+  const insets = useSafeAreaInsets();
 
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
-  const iconColor = useThemeColor({}, "icon");
-  const borderColor = useThemeColor({}, "icon");
-  const tintColor = "#83ab64";
+  // Recipe form state - matching index.tsx
+  const [recipeName, setRecipeName] = useState("");
+  const [recipeDescription, setRecipeDescription] = useState("");
+  const [recipeCategory, setRecipeCategory] = useState("");
+  const [recipeTime, setRecipeTime] = useState("");
+  const [recipeDifficulty, setRecipeDifficulty] = useState("Easy");
+  const [recipeCalories, setRecipeCalories] = useState("");
+  const [showDifficultyPicker, setShowDifficultyPicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const requestPermissions = async () => {
     if (Platform.OS !== "web") {
-      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status: cameraStatus } =
+        await ImagePicker.requestCameraPermissionsAsync();
+      const { status: mediaStatus } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (cameraStatus !== "granted" || mediaStatus !== "granted") {
         Alert.alert(
@@ -83,13 +82,7 @@ export default function CameraScreen() {
       if (!result.canceled && result.assets[0]) {
         setCurrentImageUri(result.assets[0].uri);
         setShowForm(true);
-        // Reset form
-        setFormData({
-          title: "",
-          description: "",
-          user_id: "60d5ec49f1b2c72b8c8e4f1a",
-          category_id: "",
-        });
+        resetRecipeForm();
       }
     } catch (error) {
       Alert.alert("Error", "Failed to take picture. Please try again.");
@@ -112,113 +105,76 @@ export default function CameraScreen() {
       if (!result.canceled && result.assets[0]) {
         setCurrentImageUri(result.assets[0].uri);
         setShowForm(true);
-        // Reset form
-        setFormData({
-          title: "",
-          description: "",
-          user_id: "60d5ec49f1b2c72b8c8e4f1a",
-          category_id: "",
-        });
+        resetRecipeForm();
       }
     } catch (error) {
       Alert.alert("Error", "Failed to pick images. Please try again.");
     }
   };
 
-  const handleSubmit = async () => {
-    if (!formData.title.trim()) {
-      Alert.alert("Error", "Please enter a recipe title.");
+  const handleCreateRecipe = () => {
+    // Validation
+    if (!recipeName.trim()) {
+      Alert.alert("Error", "Please enter a recipe name");
       return;
     }
-    if (!formData.description.trim()) {
-      Alert.alert("Error", "Please enter a description.");
+    if (!recipeDescription.trim()) {
+      Alert.alert("Error", "Please enter a recipe description");
       return;
     }
-    if (!formData.category_id) {
-      Alert.alert("Error", "Please select a category.");
+    if (!recipeCategory) {
+      Alert.alert("Error", "Please select a category");
+      return;
+    }
+    if (!recipeTime.trim()) {
+      Alert.alert("Error", "Please enter preparation time");
+      return;
+    }
+    if (!recipeCalories.trim() || isNaN(Number(recipeCalories))) {
+      Alert.alert("Error", "Please enter a valid calorie count");
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      const recipeData = {
-        title: formData.title,
-        description: formData.description,
-        user_id: formData.user_id,
-        category_id: formData.category_id,
-      };
 
-      const response = await fetch(`${API_BASE_URL}/api/recipes`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(recipeData),
-      });
+    // Create new recipe
+    const newRecipe = {
+      id: String(Date.now()),
+      name: recipeName.trim(),
+      date: new Date().toISOString().split("T")[0],
+      image: currentImageUri,
+      title: recipeName.trim(),
+      description: recipeDescription.trim(),
+      category_id: recipeCategory,
+    };
 
-      const data = await response.json();
+    // Add to My Recipes context
+    addRecipe(newRecipe);
 
-      if (response.ok) {
-        // Add recipe to My Recipes
-        const newRecipe = {
-          id: data.id || Date.now().toString(),
-          name: formData.title,
-          date: new Date().toISOString().split("T")[0],
-          image: currentImageUri,
-          title: formData.title,
-          description: formData.description,
-          category_id: formData.category_id,
-        };
-        addRecipe(newRecipe);
+    // Reset form
+    resetRecipeForm();
+    setShowForm(false);
+    setCurrentImageUri(null);
+    setIsSubmitting(false);
 
-        Alert.alert("Success", "Recipe posted successfully!", [
-          {
-            text: "OK",
-            onPress: () => {
-              setShowForm(false);
-              setCurrentImageUri(null);
-              if (currentImageUri) {
-                setSelectedImages([...selectedImages, currentImageUri]);
-              }
-            },
-          },
-        ]);
-      } else {
-        Alert.alert("Error", data.message || "Failed to post recipe.");
-      }
-    } catch (error) {
-      // Even if API fails, add to local recipes for demo purposes
-      const newRecipe = {
-        id: Date.now().toString(),
-        name: formData.title,
-        date: new Date().toISOString().split("T")[0],
-        image: currentImageUri,
-        title: formData.title,
-        description: formData.description,
-        category_id: formData.category_id,
-      };
-      addRecipe(newRecipe);
+    Alert.alert("Success", "Recipe created successfully!");
+  };
 
-      Alert.alert("Success", "Recipe added to My Recipes!", [
-        {
-          text: "OK",
-          onPress: () => {
-            setShowForm(false);
-            setCurrentImageUri(null);
-            if (currentImageUri) {
-              setSelectedImages([...selectedImages, currentImageUri]);
-            }
-          },
-        },
-      ]);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const resetRecipeForm = () => {
+    setRecipeName("");
+    setRecipeDescription("");
+    setRecipeCategory("");
+    setRecipeTime("");
+    setRecipeDifficulty("Easy");
+    setRecipeCalories("");
+    setShowDifficultyPicker(false);
+    setShowCategoryPicker(false);
   };
 
   const closeForm = () => {
     setShowForm(false);
     setCurrentImageUri(null);
+    resetRecipeForm();
   };
 
   const showImageOptions = () => {
@@ -240,231 +196,370 @@ export default function CameraScreen() {
   };
 
   return (
-    <ImageBackground
-      source={require("@/assets/images/background.png")}
-      style={styles.container}
-      resizeMode="cover"
-    >
-      <View style={styles.overlay} />
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <ThemedView style={styles.content}>
-          <ThemedView style={styles.header}>
-            <ThemedText type="title" style={styles.headerTitle}>
-              Camera
+    <View style={styles.container}>
+      {/* Creative Background Elements */}
+      <View style={styles.backgroundElements}>
+        <View style={styles.circle1} />
+        <View style={styles.circle2} />
+        <View style={styles.circle3} />
+      </View>
+
+      <View style={[styles.content, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.header}>
+          <ThemedText style={styles.headerTitle}>Create Recipe</ThemedText>
+        </View>
+
+        {/* Camera Button */}
+        <View style={styles.cameraButtonContainer}>
+          <TouchableOpacity
+            style={styles.cameraButton}
+            onPress={showImageOptions}
+          >
+            <Ionicons name="camera" size={40} color="#fff" />
+            <ThemedText style={styles.cameraButtonText}>
+              {selectedImages.length === 0
+                ? "Take or Select Photo"
+                : "Add More Photos"}
             </ThemedText>
-          </ThemedView>
+          </TouchableOpacity>
+        </View>
 
-          {/* Camera Button */}
-          <View style={styles.cameraButtonContainer}>
-            <TouchableOpacity
-              style={[styles.cameraButton, { backgroundColor: tintColor }]}
-              onPress={showImageOptions}
-            >
-              <IconSymbol name="camera.fill" size={40} color="#fff" />
-              <ThemedText style={styles.cameraButtonText}>
-                {selectedImages.length === 0
-                  ? "Take or Select Photo"
-                  : "Add More Photos"}
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-
-          {/* Selected Images Grid */}
-          {selectedImages.length > 0 && (
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <ThemedText type="defaultSemiBold" style={styles.imagesHeader}>
-                Your Photos ({selectedImages.length})
-              </ThemedText>
-              <View style={styles.imagesGrid}>
-                {selectedImages.map((uri, index) => (
-                  <View key={index} style={styles.imageWrapper}>
-                    <Image source={{ uri }} style={styles.image} contentFit="cover" />
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => removeImage(index)}
-                    >
-                      <IconSymbol name="xmark.circle.fill" size={24} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
-          )}
-
-          {/* Empty State */}
-          {selectedImages.length === 0 && (
-            <View style={styles.emptyContainer}>
-              <IconSymbol name="camera.fill" size={80} color={iconColor} />
-              <ThemedText type="subtitle" style={styles.emptyText}>
-                No photos yet
-              </ThemedText>
-              <ThemedText style={styles.emptySubtext}>
-                Tap the button above to take or select photos of your dishes
-              </ThemedText>
+        {/* Selected Images Grid */}
+        {selectedImages.length > 0 && (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <ThemedText style={styles.imagesHeader}>
+              Your Photos ({selectedImages.length})
+            </ThemedText>
+            <View style={styles.imagesGrid}>
+              {selectedImages.map((uri, index) => (
+                <View key={index} style={styles.imageWrapper}>
+                  <Image
+                    source={{ uri }}
+                    style={styles.image}
+                    contentFit="cover"
+                  />
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removeImage(index)}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
-          )}
-        </ThemedView>
-      </SafeAreaView>
+          </ScrollView>
+        )}
+
+        {/* Empty State */}
+        {selectedImages.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Ionicons
+              name="camera-outline"
+              size={80}
+              color="rgba(255, 255, 255, 0.6)"
+            />
+            <ThemedText style={styles.emptyText}>No photos yet</ThemedText>
+            <ThemedText style={styles.emptySubtext}>
+              Tap the button above to take or select photos of your dishes
+            </ThemedText>
+          </View>
+        )}
+      </View>
 
       {/* Recipe Form Modal */}
       <Modal
         visible={showForm}
         animationType="slide"
-        presentationStyle="pageSheet"
+        transparent={true}
         onRequestClose={closeForm}
       >
         <KeyboardAvoidingView
-          style={styles.modalContainer}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
         >
-          <ImageBackground
-            source={require("@/assets/images/background.png")}
-            style={styles.modalBackground}
-            resizeMode="cover"
-          >
-            <View style={styles.modalOverlay} />
-            <SafeAreaView style={styles.modalContent} edges={["top"]}>
-              <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={closeForm}>
-                  <ThemedText style={[styles.cancelButton, { color: tintColor }]}>
-                    Cancel
-                  </ThemedText>
-                </TouchableOpacity>
-                <ThemedText type="title" style={styles.modalTitle}>
-                  New Recipe
-                </ThemedText>
-                <TouchableOpacity
-                  onPress={handleSubmit}
-                  disabled={isSubmitting}
-                  style={[
-                    styles.submitButton,
-                    { backgroundColor: tintColor },
-                    isSubmitting && styles.submitButtonDisabled,
-                  ]}
-                >
-                  <ThemedText style={styles.submitButtonText}>
-                    {isSubmitting ? "Posting..." : "Post"}
-                  </ThemedText>
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                style={styles.formScrollView}
-                contentContainerStyle={styles.formContent}
-                showsVerticalScrollIndicator={false}
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>
+                Create New Recipe
+              </ThemedText>
+              <TouchableOpacity
+                onPress={closeForm}
+                style={styles.modalCloseButton}
               >
-                {/* Image Preview */}
-                {currentImageUri && (
-                  <View style={styles.imagePreviewContainer}>
-                    <Image source={{ uri: currentImageUri }} style={styles.imagePreview} contentFit="cover" />
-                  </View>
-                )}
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
 
-                {/* Title Input */}
-                <View style={styles.inputContainer}>
-                  <ThemedText type="defaultSemiBold" style={styles.inputLabel}>
-                    Title *
-                  </ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: "#000", borderColor: borderColor }]}
-                    placeholder="Enter recipe title"
-                    placeholderTextColor={iconColor}
-                    value={formData.title}
-                    onChangeText={(text) => setFormData({ ...formData, title: text })}
+            <ScrollView
+              style={styles.modalBody}
+              contentContainerStyle={styles.modalBodyContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Image Preview */}
+              {currentImageUri && (
+                <View style={styles.imagePreviewContainer}>
+                  <Image
+                    source={{ uri: currentImageUri }}
+                    style={styles.imagePreview}
+                    contentFit="cover"
                   />
                 </View>
+              )}
 
-                {/* Description Input */}
-                <View style={styles.inputContainer}>
-                  <ThemedText type="defaultSemiBold" style={styles.inputLabel}>
-                    Description *
-                  </ThemedText>
+              {/* Recipe Name */}
+              <View style={styles.inputContainer}>
+                <ThemedText style={styles.inputLabel}>Recipe Name</ThemedText>
+                <View style={styles.inputWrapper}>
                   <TextInput
-                    style={[
-                      styles.textArea,
-                      { color: "#000", borderColor: borderColor },
-                    ]}
-                    placeholder="Describe your recipe..."
-                    placeholderTextColor={iconColor}
-                    value={formData.description}
-                    onChangeText={(text) => setFormData({ ...formData, description: text })}
+                    style={styles.input}
+                    placeholder="Enter recipe name"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={recipeName}
+                    onChangeText={setRecipeName}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </View>
+
+              {/* Recipe Description */}
+              <View style={styles.inputContainer}>
+                <ThemedText style={styles.inputLabel}>Description</ThemedText>
+                <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Enter recipe description"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={recipeDescription}
+                    onChangeText={setRecipeDescription}
                     multiline
                     numberOfLines={4}
                     textAlignVertical="top"
                   />
                 </View>
+              </View>
 
-                {/* Category Picker */}
-                <View style={styles.inputContainer}>
-                  <ThemedText type="defaultSemiBold" style={styles.inputLabel}>
-                    Category *
-                  </ThemedText>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.categoryScroll}
-                    contentContainerStyle={styles.categoryContainer}
+              {/* Category Selection */}
+              <View style={styles.inputContainer}>
+                <ThemedText style={styles.inputLabel}>Category</ThemedText>
+                <TouchableOpacity
+                  style={styles.inputWrapper}
+                  onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+                >
+                  <ThemedText
+                    style={[
+                      styles.input,
+                      !recipeCategory && styles.placeholderText,
+                    ]}
                   >
+                    {recipeCategory || "Select a category"}
+                  </ThemedText>
+                  <Ionicons
+                    name={showCategoryPicker ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="rgba(255, 255, 255, 0.7)"
+                  />
+                </TouchableOpacity>
+                {showCategoryPicker && (
+                  <View style={styles.pickerContainer}>
                     {categories.map((category) => (
                       <TouchableOpacity
                         key={category.id}
-                        onPress={() => setFormData({ ...formData, category_id: category.id })}
                         style={[
-                          styles.categoryChip,
-                          formData.category_id === category.id && [
-                            styles.categoryChipActive,
-                            { backgroundColor: tintColor },
-                          ],
+                          styles.pickerOption,
+                          recipeCategory === category.name &&
+                            styles.pickerOptionActive,
                         ]}
+                        onPress={() => {
+                          setRecipeCategory(category.name);
+                          setShowCategoryPicker(false);
+                        }}
                       >
+                        <MaterialCommunityIcons
+                          name={category.icon as any}
+                          size={18}
+                          color={
+                            recipeCategory === category.name
+                              ? "#1a4d2e"
+                              : "#fff"
+                          }
+                        />
                         <ThemedText
                           style={[
-                            styles.categoryChipText,
-                            formData.category_id === category.id && styles.categoryChipTextActive,
+                            styles.pickerOptionText,
+                            recipeCategory === category.name &&
+                              styles.pickerOptionTextActive,
                           ]}
                         >
                           {category.name}
                         </ThemedText>
                       </TouchableOpacity>
                     ))}
-                  </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              {/* Time and Difficulty Row */}
+              <View style={styles.rowContainer}>
+                <View style={[styles.inputContainer, styles.halfWidth]}>
+                  <ThemedText style={styles.inputLabel}>Time</ThemedText>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g., 30 min"
+                      placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                      value={recipeTime}
+                      onChangeText={setRecipeTime}
+                    />
+                  </View>
                 </View>
-              </ScrollView>
-            </SafeAreaView>
-          </ImageBackground>
+
+                <View style={[styles.inputContainer, styles.halfWidth]}>
+                  <ThemedText style={styles.inputLabel}>Difficulty</ThemedText>
+                  <TouchableOpacity
+                    style={styles.inputWrapper}
+                    onPress={() =>
+                      setShowDifficultyPicker(!showDifficultyPicker)
+                    }
+                  >
+                    <ThemedText
+                      style={[
+                        styles.input,
+                        !recipeDifficulty && styles.placeholderText,
+                      ]}
+                    >
+                      {recipeDifficulty}
+                    </ThemedText>
+                    <Ionicons
+                      name={
+                        showDifficultyPicker ? "chevron-up" : "chevron-down"
+                      }
+                      size={20}
+                      color="rgba(255, 255, 255, 0.7)"
+                    />
+                  </TouchableOpacity>
+                  {showDifficultyPicker && (
+                    <View style={styles.pickerContainer}>
+                      {difficultyOptions.map((difficulty) => (
+                        <TouchableOpacity
+                          key={difficulty}
+                          style={[
+                            styles.pickerOption,
+                            recipeDifficulty === difficulty &&
+                              styles.pickerOptionActive,
+                          ]}
+                          onPress={() => {
+                            setRecipeDifficulty(difficulty);
+                            setShowDifficultyPicker(false);
+                          }}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.pickerOptionText,
+                              recipeDifficulty === difficulty &&
+                                styles.pickerOptionTextActive,
+                            ]}
+                          >
+                            {difficulty}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Calories */}
+              <View style={styles.inputContainer}>
+                <ThemedText style={styles.inputLabel}>Calories</ThemedText>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter calorie count"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={recipeCalories}
+                    onChangeText={setRecipeCalories}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              {/* Create Button */}
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={handleCreateRecipe}
+                disabled={isSubmitting}
+                activeOpacity={0.85}
+              >
+                <ThemedText style={styles.createButtonText}>
+                  {isSubmitting ? "Creating..." : "Create Recipe"}
+                </ThemedText>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#1a4d2e", // Dark forest green
+    position: "relative",
+  },
+  backgroundElements: {
+    position: "absolute",
     width: "100%",
     height: "100%",
+    top: 0,
+    left: 0,
+    zIndex: 0,
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  circle1: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    top: -50,
+    right: -50,
+  },
+  circle2: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    bottom: 100,
+    left: -30,
+  },
+  circle3: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(255, 255, 255, 0.025)",
+    top: "40%",
+    right: 20,
   },
   content: {
     flex: 1,
-    backgroundColor: "transparent",
+    zIndex: 1,
   },
   header: {
     paddingHorizontal: 24,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.1)",
   },
   headerTitle: {
     fontSize: 28,
-    color: "#080808",
+    fontWeight: "700",
+    color: "#fff",
+    opacity: 0.95,
   },
   cameraButtonContainer: {
     paddingHorizontal: 24,
@@ -476,8 +571,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 20,
     paddingHorizontal: 24,
-    borderRadius: 16,
+    borderRadius: 18,
     gap: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
   cameraButtonText: {
     color: "#fff",
@@ -494,7 +592,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 16,
     paddingHorizontal: 24,
-    color: "#080808",
+    color: "#fff",
+    fontWeight: "600",
+    opacity: 0.95,
   },
   imagesGrid: {
     flexDirection: "row",
@@ -516,7 +616,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     borderRadius: 12,
   },
   emptyContainer: {
@@ -529,129 +629,164 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 24,
     marginBottom: 12,
-    color: "#080808",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#fff",
+    opacity: 0.9,
   },
   emptySubtext: {
     opacity: 0.7,
     fontSize: 14,
     textAlign: "center",
-    color: "#080808",
-  },
-  modalContainer: {
-    flex: 1,
-  },
-  modalBackground: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
+    color: "rgba(255, 255, 255, 0.8)",
   },
   modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#1a4d2e",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    maxHeight: "90%",
+    height: "90%",
   },
   modalHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.1)",
-  },
-  cancelButton: {
-    fontSize: 16,
-    fontWeight: "600",
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#080808",
-  },
-  submitButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  submitButtonText: {
+    fontSize: 22,
+    fontWeight: "700",
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
   },
-  formScrollView: {
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBody: {
     flex: 1,
   },
-  formContent: {
-    paddingBottom: 24,
+  modalBodyContent: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 40,
   },
   imagePreviewContainer: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-    borderRadius: 12,
+    marginBottom: 24,
+    borderRadius: 16,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   imagePreview: {
     width: "100%",
     height: 200,
-    borderRadius: 12,
   },
   inputContainer: {
-    marginHorizontal: 16,
-    marginTop: 16,
+    marginBottom: 24,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255, 255, 255, 0.9)",
     marginBottom: 8,
-    color: "#080808",
+  },
+  inputWrapper: {
+    borderWidth: 1.5,
+    borderRadius: 18,
+    borderColor: "rgba(255, 255, 255, 0.25)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: 20,
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    flex: 1,
+    paddingVertical: 16,
     fontSize: 16,
-    backgroundColor: "#fff",
+    color: "#fff",
+    backgroundColor: "transparent",
+  },
+  textAreaWrapper: {
+    minHeight: 100,
   },
   textArea: {
+    minHeight: 80,
+    paddingTop: 16,
+  },
+  placeholderText: {
+    color: "rgba(255, 255, 255, 0.5)",
+  },
+  rowContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  pickerContainer: {
+    marginTop: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    overflow: "hidden",
+  },
+  pickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
-    minHeight: 100,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  },
+  pickerOptionActive: {
     backgroundColor: "#fff",
   },
-  categoryScroll: {
-    maxHeight: 50,
-  },
-  categoryContainer: {
-    gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    marginRight: 8,
-  },
-  categoryChipActive: {
-    backgroundColor: "#83ab64",
-  },
-  categoryChipText: {
-    fontSize: 14,
-    color: "#080808",
+  pickerOptionText: {
+    fontSize: 15,
+    color: "#fff",
     fontWeight: "500",
   },
-  categoryChipTextActive: {
-    color: "#fff",
+  pickerOptionTextActive: {
+    color: "#1a4d2e",
     fontWeight: "600",
   },
+  createButton: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  createButtonText: {
+    color: "#1a4d2e",
+    fontSize: 17,
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
 });
-

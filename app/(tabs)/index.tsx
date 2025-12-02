@@ -50,8 +50,8 @@ const availableIcons = [
   "carrot",
 ];
 
-// Mock data for recipes (sorted by latest added first)
-const mockRecipes = [
+// Default recipes (sorted by latest added first)
+const defaultRecipes = [
   {
     id: "1",
     name: "Morning Pancakes",
@@ -129,6 +129,7 @@ const mockRecipes = [
 export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState("1");
   const [categories, setCategories] = useState(defaultCategories);
+  const [recipes, setRecipes] = useState(defaultRecipes);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAllRecipesModal, setShowAllRecipesModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -190,8 +191,8 @@ export default function HomeScreen() {
 
   const filteredRecipes =
     selectedCategory === "1"
-      ? mockRecipes
-      : mockRecipes.filter(
+      ? recipes
+      : recipes.filter(
           (recipe) =>
             recipe.category ===
             categories.find((cat) => cat.id === selectedCategory)?.name
@@ -464,7 +465,7 @@ export default function HomeScreen() {
               contentContainerStyle={styles.allRecipesScrollContent}
               showsVerticalScrollIndicator={false}
             >
-              {mockRecipes.map((recipe) => (
+              {recipes.map((recipe) => (
                 <TouchableOpacity
                   key={recipe.id}
                   style={styles.allRecipesCard}
@@ -721,8 +722,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalBody: {
+    flex: 1,
+  },
+  modalBodyContent: {
     paddingHorizontal: 24,
     paddingTop: 24,
+    paddingBottom: 40,
   },
   inputContainer: {
     marginBottom: 24,
@@ -746,6 +751,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#fff",
     backgroundColor: "transparent",
+    flex: 1,
+  },
+  textAreaWrapper: {
+    minHeight: 100,
+  },
+  textArea: {
+    minHeight: 80,
+    paddingTop: 16,
+  },
+  placeholderText: {
+    color: "rgba(255, 255, 255, 0.5)",
+  },
+  rowContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  pickerContainer: {
+    marginTop: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    overflow: "hidden",
+  },
+  pickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  },
+  pickerOptionActive: {
+    backgroundColor: "#fff",
+  },
+  pickerOptionText: {
+    fontSize: 15,
+    color: "#fff",
+    fontWeight: "500",
+  },
+  pickerOptionTextActive: {
+    color: "#1a4d2e",
+    fontWeight: "600",
   },
   iconSelectionContainer: {
     marginBottom: 32,

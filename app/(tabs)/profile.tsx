@@ -7,16 +7,17 @@ import {
   Alert,
   Platform,
   TextInput,
-  ImageBackground,
   Modal,
+  ImageBackground,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  useSafeAreaInsets,
+  SafeAreaView,
+} from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Collapsible } from "@/components/ui/collapsible";
 import { ProfileSkeleton } from "@/components/skeleton";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
@@ -47,11 +48,11 @@ export default function ProfileScreen() {
   );
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [gender, setGender] = useState("Prefer not to say");
-  const [selectedRecipe, setSelectedRecipe] = useState<typeof myRecipes[0] | null>(null);
-  const textColor = useThemeColor({}, "text");
-  const iconColor = useThemeColor({}, "icon");
-  const borderColor = useThemeColor({}, "icon");
+  const [selectedRecipe, setSelectedRecipe] = useState<
+    (typeof myRecipes)[0] | null
+  >(null);
   const isLoading = useNavigationLoading();
+  const insets = useSafeAreaInsets();
 
   const requestPermissions = async () => {
     if (Platform.OS !== "web") {
@@ -177,27 +178,27 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <ImageBackground
-        source={require("@/assets/images/background.png")}
-        style={styles.container}
-        resizeMode="cover"
-      >
-        <View style={styles.overlay} />
+      <View style={styles.container}>
         <ProfileSkeleton />
-      </ImageBackground>
+      </View>
     );
   }
 
   return (
-    <ImageBackground
-      source={require("@/assets/images/background.png")}
-      style={styles.container}
-      resizeMode="cover"
-    >
-      <View style={styles.overlay} />
+    <View style={styles.container}>
+      {/* Creative Background Elements */}
+      <View style={styles.backgroundElements}>
+        <View style={styles.circle1} />
+        <View style={styles.circle2} />
+        <View style={styles.circle3} />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 10 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Header */}
@@ -215,49 +216,39 @@ export default function ProfileScreen() {
                     contentFit="cover"
                   />
                 ) : (
-                  <IconSymbol name="person.fill" size={60} color="#83ab64" />
+                  <Ionicons
+                    name="person"
+                    size={60}
+                    color="rgba(255, 255, 255, 0.7)"
+                  />
                 )}
               </View>
-              <View
-                style={[
-                  styles.editIconContainer,
-                  { backgroundColor: "#83ab64", borderColor: "#fff" },
-                ]}
-              >
-                <IconSymbol name="camera.fill" size={16} color="#fff" />
+              <View style={styles.editIconContainer}>
+                <Ionicons name="camera" size={16} color="#fff" />
               </View>
             </View>
           </TouchableOpacity>
           <View style={styles.userNameContainer}>
             {isEditingName ? (
               <TextInput
-                style={[
-                  styles.userNameInput,
-                  { color: textColor, borderColor: borderColor },
-                ]}
+                style={styles.userNameInput}
                 value={userName}
                 onChangeText={setUserName}
                 onSubmitEditing={() => saveUsername(userName)}
                 onBlur={() => saveUsername(userName)}
                 autoFocus
                 placeholder="Enter username"
-                placeholderTextColor={iconColor}
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
             ) : (
-              <ThemedText type="title" style={styles.userName}>
-                {userName}
-              </ThemedText>
+              <ThemedText style={styles.userName}>{userName}</ThemedText>
             )}
             {!isEditingName && (
               <TouchableOpacity
                 onPress={handleEditUsername}
                 style={styles.editNameButton}
               >
-                <IconSymbol
-                  name={"pencil.fill" as any}
-                  size={20}
-                  color="#fff"
-                />
+                <Ionicons name="pencil" size={20} color="#fff" />
               </TouchableOpacity>
             )}
           </View>
@@ -270,10 +261,7 @@ export default function ProfileScreen() {
             </ThemedText>
             {isEditingBio ? (
               <TextInput
-                style={[
-                  styles.bioInput,
-                  { color: textColor, borderColor: borderColor },
-                ]}
+                style={styles.bioInput}
                 value={bio}
                 onChangeText={setBio}
                 onSubmitEditing={() => saveBio(bio)}
@@ -282,7 +270,7 @@ export default function ProfileScreen() {
                 multiline
                 numberOfLines={4}
                 placeholder="Tell us about yourself..."
-                placeholderTextColor={iconColor}
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
             ) : (
               <TouchableOpacity onPress={handleEditBio}>
@@ -322,18 +310,14 @@ export default function ProfileScreen() {
                         contentFit="cover"
                       />
                     ) : (
-                      <IconSymbol
-                        name="book.fill"
+                      <MaterialCommunityIcons
+                        name="food"
                         size={40}
-                        color={iconColor}
+                        color="rgba(255, 255, 255, 0.7)"
                       />
                     )}
                   </View>
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={styles.recipeName}
-                    numberOfLines={2}
-                  >
+                  <ThemedText style={styles.recipeName} numberOfLines={2}>
                     {recipe.name}
                   </ThemedText>
                   <ThemedText style={styles.recipeDate}>
@@ -356,20 +340,17 @@ export default function ProfileScreen() {
                       <Image
                         source={{ uri: recipe.image }}
                         style={styles.recipeImage}
+                        contentFit="cover"
                       />
                     ) : (
-                      <IconSymbol
-                        name="book.fill"
+                      <MaterialCommunityIcons
+                        name="food"
                         size={40}
-                        color={iconColor}
+                        color="rgba(255, 255, 255, 0.7)"
                       />
                     )}
                   </View>
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={styles.recipeName}
-                    numberOfLines={2}
-                  >
+                  <ThemedText style={styles.recipeName} numberOfLines={2}>
                     {recipe.name}
                   </ThemedText>
                   <ThemedText style={styles.recipeDate}>
@@ -392,12 +373,13 @@ export default function ProfileScreen() {
                       <Image
                         source={{ uri: recipe.image }}
                         style={styles.recipeImage}
+                        contentFit="cover"
                       />
                     ) : (
-                      <IconSymbol
-                        name="book.fill"
+                      <MaterialCommunityIcons
+                        name="food"
                         size={40}
-                        color={iconColor}
+                        color="rgba(255, 255, 255, 0.7)"
                       />
                     )}
                   </View>
@@ -422,96 +404,133 @@ export default function ProfileScreen() {
       <Modal
         visible={selectedRecipe !== null}
         animationType="slide"
-        presentationStyle="pageSheet"
+        transparent={true}
         onRequestClose={() => setSelectedRecipe(null)}
       >
-        <ImageBackground
-          source={require("@/assets/images/background.png")}
-          style={styles.modalContainer}
-          resizeMode="cover"
-        >
-          <View style={styles.modalOverlay} />
-          <SafeAreaView style={styles.modalContent} edges={["top"]}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setSelectedRecipe(null)}>
-                <ThemedText style={[styles.closeButton, { color: "#83ab64" }]}>
-                  Close
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <SafeAreaView style={styles.modalContent} edges={["top"]}>
+              <View style={styles.modalHeader}>
+                <ThemedText style={styles.modalTitle}>
+                  Recipe Details
                 </ThemedText>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  onPress={() => setSelectedRecipe(null)}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
 
-            {selectedRecipe && (
-              <ScrollView
-                style={styles.modalScrollView}
-                contentContainerStyle={styles.modalScrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                {/* Recipe Image */}
-                {selectedRecipe.image ? (
-                  <View style={styles.modalImageContainer}>
-                    <Image
-                      source={{ uri: selectedRecipe.image }}
-                      style={styles.modalImage}
-                      contentFit="cover"
-                    />
-                  </View>
-                ) : (
-                  <View style={styles.modalImagePlaceholder}>
-                    <IconSymbol name="book.fill" size={60} color={iconColor} />
-                  </View>
-                )}
-
-                {/* Recipe Title */}
-                <View style={styles.modalInfoContainer}>
-                  <ThemedText type="title" style={styles.modalTitle}>
-                    {selectedRecipe.name || selectedRecipe.title}
-                  </ThemedText>
-
-                  {/* Recipe Date */}
-                  <ThemedText style={styles.modalDate}>
-                    Posted on {selectedRecipe.date}
-                  </ThemedText>
-
-                  {/* Recipe Description */}
-                  {selectedRecipe.description ? (
-                    <View style={styles.modalDescriptionContainer}>
-                      <ThemedText
-                        type="defaultSemiBold"
-                        style={styles.modalDescriptionLabel}
-                      >
-                        Description
-                      </ThemedText>
-                      <ThemedText style={styles.modalDescription}>
-                        {selectedRecipe.description}
-                      </ThemedText>
+              {selectedRecipe && (
+                <ScrollView
+                  style={styles.modalScrollView}
+                  contentContainerStyle={styles.modalScrollContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* Recipe Image */}
+                  {selectedRecipe.image ? (
+                    <View style={styles.modalImageContainer}>
+                      <Image
+                        source={{ uri: selectedRecipe.image }}
+                        style={styles.modalImage}
+                        contentFit="cover"
+                      />
                     </View>
                   ) : (
-                    <ThemedText style={styles.modalNoDescription}>
-                      No description available for this recipe.
-                    </ThemedText>
+                    <View style={styles.modalImagePlaceholder}>
+                      <MaterialCommunityIcons
+                        name="food"
+                        size={60}
+                        color="rgba(255, 255, 255, 0.7)"
+                      />
+                    </View>
                   )}
-                </View>
-              </ScrollView>
-            )}
-          </SafeAreaView>
-        </ImageBackground>
+
+                  {/* Recipe Title */}
+                  <View style={styles.modalInfoContainer}>
+                    <ThemedText type="title" style={styles.modalTitle}>
+                      {selectedRecipe.name || selectedRecipe.title}
+                    </ThemedText>
+
+                    {/* Recipe Date */}
+                    <ThemedText style={styles.modalDate}>
+                      Posted on {selectedRecipe.date}
+                    </ThemedText>
+
+                    {/* Recipe Description */}
+                    {selectedRecipe.description ? (
+                      <View style={styles.modalDescriptionContainer}>
+                        <ThemedText
+                          type="defaultSemiBold"
+                          style={styles.modalDescriptionLabel}
+                        >
+                          Description
+                        </ThemedText>
+                        <ThemedText style={styles.modalDescription}>
+                          {selectedRecipe.description}
+                        </ThemedText>
+                      </View>
+                    ) : (
+                      <ThemedText style={styles.modalNoDescription}>
+                        No description available for this recipe.
+                      </ThemedText>
+                    )}
+                  </View>
+                </ScrollView>
+              )}
+            </SafeAreaView>
+          </View>
+        </View>
       </Modal>
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#1a4d2e", // Dark forest green
+    position: "relative",
+  },
+  backgroundElements: {
+    position: "absolute",
     width: "100%",
     height: "100%",
+    top: 0,
+    left: 0,
+    zIndex: 0,
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  circle1: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    top: -50,
+    right: -50,
+  },
+  circle2: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    bottom: 100,
+    left: -30,
+  },
+  circle3: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(255, 255, 255, 0.025)",
+    top: "40%",
+    right: 20,
   },
   scrollView: {
     flex: 1,
+    zIndex: 1,
   },
   scrollContent: {
     paddingBottom: 24,
@@ -520,21 +539,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 32,
     paddingHorizontal: 24,
-    backgroundColor: "transparent",
   },
   avatarWrapper: {
     position: "relative",
     marginBottom: 16,
-    backgroundColor: "transparent",
   },
   avatarContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "rgba(131, 171, 100, 0.1)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   avatarImage: {
     width: 100,
@@ -551,6 +570,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: "#fff",
   },
   userNameContainer: {
     flexDirection: "row",
@@ -561,17 +582,23 @@ const styles = StyleSheet.create({
   },
   userName: {
     textAlign: "center",
-    color: "#080808",
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#fff",
+    opacity: 0.95,
   },
   userNameInput: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
-    borderWidth: 1,
-    borderRadius: 8,
+    borderWidth: 1.5,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 8,
     minWidth: 200,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    color: "#fff",
   },
   editNameButton: {
     padding: 4,
@@ -581,50 +608,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginBottom: 24,
-    color: "#080808",
+    color: "rgba(255, 255, 255, 0.8)",
   },
   bioContainer: {
     width: "100%",
     marginBottom: 20,
     paddingHorizontal: 24,
-    backgroundColor: "transparent",
   },
   bioLabel: {
     fontSize: 16,
     marginBottom: 8,
-    color: "#080808",
+    fontWeight: "600",
+    color: "rgba(255, 255, 255, 0.9)",
   },
   bioText: {
     fontSize: 14,
     lineHeight: 20,
     opacity: 0.8,
-    color: "#080808",
+    color: "rgba(255, 255, 255, 0.9)",
   },
   bioInput: {
     fontSize: 14,
     lineHeight: 20,
-    borderWidth: 1,
-    borderRadius: 8,
+    borderWidth: 1.5,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
     minHeight: 80,
     textAlignVertical: "top",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    color: "#fff",
   },
   genderContainer: {
     width: "100%",
     marginBottom: 20,
     paddingHorizontal: 24,
-    backgroundColor: "transparent",
   },
   genderLabel: {
     fontSize: 16,
     marginBottom: 8,
-    color: "#080808",
+    fontWeight: "600",
+    color: "rgba(255, 255, 255, 0.9)",
   },
   genderText: {
     fontSize: 14,
     opacity: 0.8,
-    color: "#080808",
+    color: "rgba(255, 255, 255, 0.9)",
   },
   editButton: {
     padding: 4,
@@ -637,7 +667,6 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 24,
     marginBottom: 32,
-    backgroundColor: "transparent",
   },
   sectionTitle: {
     marginBottom: 16,
@@ -646,24 +675,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    backgroundColor: "transparent",
   },
   recipeCard: {
     width: "48%",
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.1)",
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     marginBottom: 16,
   },
   recipeImageContainer: {
     width: "100%",
     height: 120,
     borderRadius: 8,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   recipeImage: {
     width: "100%",
@@ -673,38 +704,46 @@ const styles = StyleSheet.create({
   recipeName: {
     marginBottom: 4,
     fontSize: 14,
-    color: "#080808",
+    fontWeight: "600",
+    color: "#fff",
+    opacity: 0.95,
   },
   recipeDate: {
     fontSize: 12,
     opacity: 0.7,
-    color: "#080808",
-  },
-  modalContainer: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
+    color: "rgba(255, 255, 255, 0.8)",
   },
   modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "flex-end",
+  },
+  modalContainer: {
+    backgroundColor: "#1a4d2e",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
+    height: "90%",
   },
   modalContent: {
     flex: 1,
-    backgroundColor: "transparent",
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.1)",
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
-  closeButton: {
-    fontSize: 16,
-    fontWeight: "600",
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   modalScrollView: {
     flex: 1,
@@ -716,6 +755,12 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 300,
     marginBottom: 16,
+    marginHorizontal: 24,
+    marginTop: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   modalImage: {
     width: "100%",
@@ -724,24 +769,23 @@ const styles = StyleSheet.create({
   modalImagePlaceholder: {
     width: "100%",
     height: 300,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
   },
   modalInfoContainer: {
     paddingHorizontal: 24,
   },
   modalTitle: {
-    fontSize: 28,
-    marginBottom: 8,
-    color: "#080808",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#fff",
   },
   modalDate: {
     fontSize: 14,
     opacity: 0.7,
     marginBottom: 24,
-    color: "#080808",
+    color: "rgba(255, 255, 255, 0.8)",
   },
   modalDescriptionContainer: {
     marginTop: 8,
@@ -749,19 +793,21 @@ const styles = StyleSheet.create({
   modalDescriptionLabel: {
     fontSize: 18,
     marginBottom: 12,
-    color: "#080808",
+    fontWeight: "600",
+    color: "#fff",
+    opacity: 0.95,
   },
   modalDescription: {
     fontSize: 16,
     lineHeight: 24,
     opacity: 0.8,
-    color: "#080808",
+    color: "rgba(255, 255, 255, 0.9)",
   },
   modalNoDescription: {
     fontSize: 14,
     opacity: 0.6,
     fontStyle: "italic",
     marginTop: 8,
-    color: "#080808",
+    color: "rgba(255, 255, 255, 0.7)",
   },
 });

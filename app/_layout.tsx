@@ -28,61 +28,63 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <RecipesProvider>
-        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-          <Stack
-          initialRouteName="sign-in"
-          screenOptions={{
-            headerShown: false,
-            // Use fade transition to avoid darkening overlay
-            cardStyleInterpolator: forFade,
-            // Remove the overlay that causes darkening
-            cardOverlayEnabled: false,
-            // Use transparent background to prevent darkening
-            cardStyle: { backgroundColor: "transparent" },
-          }}
+        <ThemeProvider
+          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
         >
-          <Stack.Screen
-            name="sign-in"
-            options={{
+          <Stack
+            initialRouteName="sign-in"
+            screenOptions={{
               headerShown: false,
-              presentation: "card",
+              // Use fade transition to avoid darkening overlay
               cardStyleInterpolator: forFade,
+              // Remove the overlay that causes darkening
               cardOverlayEnabled: false,
+              // Use transparent background to prevent darkening
               cardStyle: { backgroundColor: "transparent" },
             }}
-          />
-          <Stack.Screen
-            name="sign-up"
-            options={{
-              headerShown: false,
-              presentation: "card",
-              cardStyleInterpolator: forFade,
-              cardOverlayEnabled: false,
-              cardStyle: { backgroundColor: "transparent" },
-            }}
-          />
-          <Stack.Screen
-            name="(tabs)"
-            options={{
-              headerShown: false,
-              cardStyleInterpolator: forFade,
-              cardOverlayEnabled: false,
-              cardStyle: { backgroundColor: "transparent" },
-            }}
-          />
-          <Stack.Screen
-            name="modal"
-            options={{
-              presentation: "modal",
-              title: "Modal",
-              cardStyleInterpolator: forFade,
-              cardOverlayEnabled: false,
-              cardStyle: { backgroundColor: "transparent" },
-            }}
-          />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+          >
+            <Stack.Screen
+              name="sign-in"
+              options={{
+                headerShown: false,
+                presentation: "card",
+                cardStyleInterpolator: forFade,
+                cardOverlayEnabled: false,
+                cardStyle: { backgroundColor: "transparent" },
+              }}
+            />
+            <Stack.Screen
+              name="sign-up"
+              options={{
+                headerShown: false,
+                presentation: "card",
+                cardStyleInterpolator: forFade,
+                cardOverlayEnabled: false,
+                cardStyle: { backgroundColor: "transparent" },
+              }}
+            />
+            <Stack.Screen
+              name="(tabs)"
+              options={{
+                headerShown: false,
+                cardStyleInterpolator: forFade,
+                cardOverlayEnabled: false,
+                cardStyle: { backgroundColor: "transparent" },
+              }}
+            />
+            <Stack.Screen
+              name="modal"
+              options={{
+                presentation: "modal",
+                title: "Modal",
+                cardStyleInterpolator: forFade,
+                cardOverlayEnabled: false,
+                cardStyle: { backgroundColor: "transparent" },
+              }}
+            />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
       </RecipesProvider>
     </SafeAreaProvider>
   );
