@@ -19,15 +19,16 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: "#83ab64",
-          borderTopWidth: 0,
+          backgroundColor: "rgba(26, 77, 46, 0.95)", // Dark forest green with slight transparency
+          borderTopWidth: 1,
+          borderTopColor: "rgba(255, 255, 255, 0.1)",
           elevation: 10,
           shadowColor: "#000",
           shadowOffset: {
             width: 0,
             height: -2,
           },
-          shadowOpacity: 0.1,
+          shadowOpacity: 0.2,
           shadowRadius: 8,
           height: 70 + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 10),
