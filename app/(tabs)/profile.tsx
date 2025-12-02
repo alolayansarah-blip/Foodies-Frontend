@@ -8,7 +8,9 @@ import {
   Platform,
   TextInput,
   ImageBackground,
+  Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/themed-text";
@@ -18,6 +20,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Collapsible } from "@/components/ui/collapsible";
 import { ProfileSkeleton } from "@/components/skeleton";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { useRecipes } from "@/contexts/RecipesContext";
 
 // Mock data for recipes
 const mockRecipes = [
@@ -35,6 +38,7 @@ const mockSavedRecipes = [
 ];
 
 export default function ProfileScreen() {
+  const { myRecipes } = useRecipes();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userName, setUserName] = useState("John Doe");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -43,6 +47,7 @@ export default function ProfileScreen() {
   );
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [gender, setGender] = useState("Prefer not to say");
+  const [selectedRecipe, setSelectedRecipe] = useState<typeof myRecipes[0] | null>(null);
   const textColor = useThemeColor({}, "text");
   const iconColor = useThemeColor({}, "icon");
   const borderColor = useThemeColor({}, "icon");
@@ -299,6 +304,47 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* My Recipes Section */}
+        <View style={styles.section}>
+          <Collapsible title="My Recipes">
+            <View style={styles.recipesGrid}>
+              {myRecipes.map((recipe) => (
+                <TouchableOpacity
+                  key={recipe.id}
+                  style={styles.recipeCard}
+                  onPress={() => setSelectedRecipe(recipe)}
+                >
+                  <View style={styles.recipeImageContainer}>
+                    {recipe.image ? (
+                      <Image
+                        source={{ uri: recipe.image }}
+                        style={styles.recipeImage}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <IconSymbol
+                        name="book.fill"
+                        size={40}
+                        color={iconColor}
+                      />
+                    )}
+                  </View>
+                  <ThemedText
+                    type="defaultSemiBold"
+                    style={styles.recipeName}
+                    numberOfLines={2}
+                  >
+                    {recipe.name}
+                  </ThemedText>
+                  <ThemedText style={styles.recipeDate}>
+                    {recipe.date}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Collapsible>
+        </View>
+
         {/* Saved Recipes Section */}
         <View style={styles.section}>
           <Collapsible title="Saved Recipes">
@@ -371,6 +417,85 @@ export default function ProfileScreen() {
           </Collapsible>
         </View>
       </ScrollView>
+
+      {/* Recipe Detail Modal */}
+      <Modal
+        visible={selectedRecipe !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSelectedRecipe(null)}
+      >
+        <ImageBackground
+          source={require("@/assets/images/background.png")}
+          style={styles.modalContainer}
+          resizeMode="cover"
+        >
+          <View style={styles.modalOverlay} />
+          <SafeAreaView style={styles.modalContent} edges={["top"]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setSelectedRecipe(null)}>
+                <ThemedText style={[styles.closeButton, { color: "#83ab64" }]}>
+                  Close
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {selectedRecipe && (
+              <ScrollView
+                style={styles.modalScrollView}
+                contentContainerStyle={styles.modalScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Recipe Image */}
+                {selectedRecipe.image ? (
+                  <View style={styles.modalImageContainer}>
+                    <Image
+                      source={{ uri: selectedRecipe.image }}
+                      style={styles.modalImage}
+                      contentFit="cover"
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.modalImagePlaceholder}>
+                    <IconSymbol name="book.fill" size={60} color={iconColor} />
+                  </View>
+                )}
+
+                {/* Recipe Title */}
+                <View style={styles.modalInfoContainer}>
+                  <ThemedText type="title" style={styles.modalTitle}>
+                    {selectedRecipe.name || selectedRecipe.title}
+                  </ThemedText>
+
+                  {/* Recipe Date */}
+                  <ThemedText style={styles.modalDate}>
+                    Posted on {selectedRecipe.date}
+                  </ThemedText>
+
+                  {/* Recipe Description */}
+                  {selectedRecipe.description ? (
+                    <View style={styles.modalDescriptionContainer}>
+                      <ThemedText
+                        type="defaultSemiBold"
+                        style={styles.modalDescriptionLabel}
+                      >
+                        Description
+                      </ThemedText>
+                      <ThemedText style={styles.modalDescription}>
+                        {selectedRecipe.description}
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    <ThemedText style={styles.modalNoDescription}>
+                      No description available for this recipe.
+                    </ThemedText>
+                  )}
+                </View>
+              </ScrollView>
+            )}
+          </SafeAreaView>
+        </ImageBackground>
+      </Modal>
     </ImageBackground>
   );
 }
@@ -553,6 +678,90 @@ const styles = StyleSheet.create({
   recipeDate: {
     fontSize: 12,
     opacity: 0.7,
+    color: "#080808",
+  },
+  modalContainer: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  },
+  modalContent: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0, 0, 0, 0.1)",
+  },
+  closeButton: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  modalScrollView: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    paddingBottom: 24,
+  },
+  modalImageContainer: {
+    width: "100%",
+    height: 300,
+    marginBottom: 16,
+  },
+  modalImage: {
+    width: "100%",
+    height: "100%",
+  },
+  modalImagePlaceholder: {
+    width: "100%",
+    height: 300,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalInfoContainer: {
+    paddingHorizontal: 24,
+  },
+  modalTitle: {
+    fontSize: 28,
+    marginBottom: 8,
+    color: "#080808",
+  },
+  modalDate: {
+    fontSize: 14,
+    opacity: 0.7,
+    marginBottom: 24,
+    color: "#080808",
+  },
+  modalDescriptionContainer: {
+    marginTop: 8,
+  },
+  modalDescriptionLabel: {
+    fontSize: 18,
+    marginBottom: 12,
+    color: "#080808",
+  },
+  modalDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    opacity: 0.8,
+    color: "#080808",
+  },
+  modalNoDescription: {
+    fontSize: 14,
+    opacity: 0.6,
+    fontStyle: "italic",
+    marginTop: 8,
     color: "#080808",
   },
 });

@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { RecipesProvider } from "@/contexts/RecipesContext";
 
 // Custom fade transition without darkening overlay
 const forFade = ({ current }: { current: { progress: number } }) => ({
@@ -26,8 +27,9 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack
+      <RecipesProvider>
+        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <Stack
           initialRouteName="sign-in"
           screenOptions={{
             headerShown: false,
@@ -81,6 +83,7 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
+      </RecipesProvider>
     </SafeAreaProvider>
   );
 }
