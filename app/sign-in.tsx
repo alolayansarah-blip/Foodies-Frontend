@@ -1,30 +1,28 @@
+import { PageSkeleton } from "@/components/skeleton";
+import { ThemedText } from "@/components/themed-text";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { router, useNavigation } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  TextInput,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useState, useEffect } from "react";
-import { router, useNavigation } from "expo-router";
-import { ThemedText } from "@/components/themed-text";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import { PageSkeleton } from "@/components/skeleton";
-import { useNavigationLoading } from "@/hooks/use-navigation-loading";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "@/contexts/AuthContext";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withTiming,
-  withSpring,
   withDelay,
-  interpolate,
+  withRepeat,
+  withSpring,
+  withTiming,
 } from "react-native-reanimated";
 
 export default function HomeScreen() {
@@ -37,7 +35,6 @@ export default function HomeScreen() {
 
   const navigation = useNavigation();
   const isLoading = useNavigationLoading();
-  const insets = useSafeAreaInsets();
   const { login, isAuthenticated, isLoading: authLoading } = useAuth();
 
   // Animation values
@@ -45,6 +42,14 @@ export default function HomeScreen() {
   const mushroom1Rotate = useSharedValue(0);
   const mushroom2Y = useSharedValue(0);
   const mushroom2Rotate = useSharedValue(0);
+  const flowerY = useSharedValue(0);
+  const flowerRotate = useSharedValue(0);
+  const lettuceY = useSharedValue(0);
+  const lettuceRotate = useSharedValue(0);
+  const garlicY = useSharedValue(0);
+  const garlicRotate = useSharedValue(0);
+  const tomatoY = useSharedValue(0);
+  const tomatoRotate = useSharedValue(0);
   const formOpacity = useSharedValue(0);
   const formTranslateY = useSharedValue(20);
 
@@ -58,8 +63,10 @@ export default function HomeScreen() {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      console.log('User already authenticated, redirecting from sign-in to tabs...');
-      router.replace('/(tabs)');
+      console.log(
+        "User already authenticated, redirecting from sign-in to tabs..."
+      );
+      router.replace("/(tabs)");
     }
   }, [isAuthenticated, authLoading]);
 
@@ -89,6 +96,38 @@ export default function HomeScreen() {
       true
     );
 
+    // Flower floating and rotating
+    flowerY.value = withRepeat(withTiming(-10, { duration: 3200 }), -1, true);
+    flowerRotate.value = withRepeat(
+      withTiming(15, { duration: 5000 }),
+      -1,
+      true
+    );
+
+    // Lettuce floating and rotating
+    lettuceY.value = withRepeat(withTiming(-8, { duration: 2800 }), -1, true);
+    lettuceRotate.value = withRepeat(
+      withTiming(-12, { duration: 4800 }),
+      -1,
+      true
+    );
+
+    // Garlic floating and rotating
+    garlicY.value = withRepeat(withTiming(-9, { duration: 3000 }), -1, true);
+    garlicRotate.value = withRepeat(
+      withTiming(10, { duration: 4200 }),
+      -1,
+      true
+    );
+
+    // Tomato floating and rotating
+    tomatoY.value = withRepeat(withTiming(-7, { duration: 2900 }), -1, true);
+    tomatoRotate.value = withRepeat(
+      withTiming(-15, { duration: 4600 }),
+      -1,
+      true
+    );
+
     // Form fade in and slide up
     formOpacity.value = withDelay(300, withTiming(1, { duration: 600 }));
     formTranslateY.value = withDelay(300, withSpring(0, { damping: 15 }));
@@ -106,6 +145,27 @@ export default function HomeScreen() {
     transform: [
       { translateY: mushroom2Y.value },
       { rotate: `${mushroom2Rotate.value}deg` },
+    ],
+  }));
+
+  const lettuceAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: lettuceY.value },
+      { rotate: `${lettuceRotate.value}deg` },
+    ],
+  }));
+
+  const garlicAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: garlicY.value },
+      { rotate: `${garlicRotate.value}deg` },
+    ],
+  }));
+
+  const tomatoAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: tomatoY.value },
+      { rotate: `${tomatoRotate.value}deg` },
     ],
   }));
 
@@ -129,7 +189,8 @@ export default function HomeScreen() {
       // Navigation is handled by AuthContext after successful login
     } catch (error: any) {
       console.error("Sign in error:", error);
-      const errorMsg = error?.message || "Failed to sign in. Please check your credentials.";
+      const errorMsg =
+        error?.message || "Failed to sign in. Please check your credentials.";
       setErrorMessage(errorMsg);
       Alert.alert("Sign In Failed", errorMsg);
     } finally {
@@ -171,6 +232,31 @@ export default function HomeScreen() {
             contentFit="contain"
           />
         </Animated.View>
+
+        {/* Lettuce Decorative Element */}
+        <Animated.View style={[styles.lettuceContainer, lettuceAnimatedStyle]}>
+          <Image
+            source={require("@/assets/images/lettuce.png")}
+            style={styles.lettuce}
+            contentFit="contain"
+          />
+        </Animated.View>
+        {/* Garlic Decorative Element */}
+        <Animated.View style={[styles.garlicContainer, garlicAnimatedStyle]}>
+          <Image
+            source={require("@/assets/images/garlic.png")}
+            style={styles.garlic}
+            contentFit="contain"
+          />
+        </Animated.View>
+        {/* Tomato Decorative Element */}
+        <Animated.View style={[styles.tomatoContainer, tomatoAnimatedStyle]}>
+          <Image
+            source={require("@/assets/images/tomato.png")}
+            style={styles.tomato}
+            contentFit="contain"
+          />
+        </Animated.View>
       </View>
 
       <KeyboardAvoidingView
@@ -178,10 +264,7 @@ export default function HomeScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: insets.top + 80 },
-          ]}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: 80 }]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
@@ -307,7 +390,10 @@ export default function HomeScreen() {
               <TouchableOpacity
                 onPress={handleSignIn}
                 activeOpacity={0.85}
-                style={[styles.primaryButton, isSubmitting && styles.primaryButtonDisabled]}
+                style={[
+                  styles.primaryButton,
+                  isSubmitting && styles.primaryButtonDisabled,
+                ]}
                 disabled={isSubmitting}
               >
                 <View style={styles.buttonContent}>
@@ -316,7 +402,11 @@ export default function HomeScreen() {
                   </ThemedText>
                   {!isSubmitting && (
                     <View style={styles.buttonArrowContainer}>
-                      <Ionicons name="arrow-forward" size={18} color="#1a4d2e" />
+                      <Ionicons
+                        name="arrow-forward"
+                        size={18}
+                        color="#1a4d2e"
+                      />
                     </View>
                   )}
                 </View>
@@ -404,6 +494,46 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
     tintColor: "rgba(255, 255, 255, 0.7)",
   },
+
+  lettuceContainer: {
+    position: "absolute",
+    bottom: -130,
+    left: -130,
+    width: 320,
+    height: 320,
+    transform: [{ rotate: "-25deg" }],
+  },
+  lettuce: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
+  },
+  garlicContainer: {
+    position: "absolute",
+    bottom: -80,
+    left: 200,
+    width: 280,
+    height: 280,
+    transform: [{ rotate: "-20deg" }],
+  },
+  garlic: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
+  },
+  tomatoContainer: {
+    position: "absolute",
+    bottom: -150,
+    right: 80,
+    width: 300,
+    height: 300,
+    transform: [{ rotate: "25deg" }],
+  },
+  tomato: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
+  },
   keyboardView: {
     flex: 1,
     zIndex: 1,
@@ -416,10 +546,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 32,
-    paddingBottom: 40,
+    paddingBottom: 170,
   },
   logoContainer: {
-    marginBottom: 40,
+    marginBottom: 20,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -439,7 +569,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 48,
+    marginBottom: 20,
     width: "100%",
     maxWidth: 300,
   },
@@ -450,7 +580,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   welcomeText: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: "600",
     color: "#fff",
     textAlign: "center",
@@ -462,7 +592,7 @@ const styles = StyleSheet.create({
     maxWidth: 380,
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: 8,
   },
   inputLabelContainer: {
     flexDirection: "row",
@@ -512,7 +642,7 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     alignSelf: "flex-end",
-    marginBottom: 32,
+    marginBottom: 10,
   },
   forgotPasswordText: {
     fontSize: 14,
@@ -582,7 +712,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 32,
+    marginTop: 10,
     flexWrap: "wrap",
   },
   footerText: {

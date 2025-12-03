@@ -1,4 +1,5 @@
 import { ThemedText } from "@/components/themed-text";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRecipes } from "@/contexts/RecipesContext";
 import { Category, getCategories } from "@/services/categories";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -17,12 +18,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const difficultyOptions = ["Easy", "Medium", "Hard"];
 
 export default function CameraScreen() {
   const { addRecipe } = useRecipes();
+  const { logout } = useAuth();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [currentImageUri, setCurrentImageUri] = useState<string | null>(null);
@@ -31,7 +33,19 @@ export default function CameraScreen() {
   >([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const insets = useSafeAreaInsets();
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+        },
+      },
+    ]);
+  };
 
   // Fetch categories from API once on mount
   useEffect(() => {
@@ -225,7 +239,10 @@ export default function CameraScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+      edges={["top", "bottom"]}
+    >
       {/* Creative Background Elements */}
       <View style={styles.backgroundElements}>
         <View style={styles.circle1} />
@@ -233,11 +250,22 @@ export default function CameraScreen() {
         <View style={styles.circle3} />
       </View>
 
-      <View style={[styles.content, { paddingTop: insets.top + 10 }]}>
-        <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>Create Recipe</ThemedText>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft} />
+        <View style={styles.headerCenter}>
+          <Image
+            source={require("@/assets/images/logo2.png")}
+            style={styles.headerLogo}
+            contentFit="contain"
+          />
         </View>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
+      <View style={[styles.content, { paddingTop: 10 }]}>
         {/* Camera Button */}
         <View style={styles.cameraButtonContainer}>
           <TouchableOpacity
@@ -544,7 +572,7 @@ export default function CameraScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -594,14 +622,36 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    paddingTop: 10,
+    backgroundColor: "transparent",
+    zIndex: 10,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff",
-    opacity: 0.95,
+  headerLeft: {
+    width: 40,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerLogo: {
+    width: 200,
+    height: 100,
+  },
+  signOutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   cameraButtonContainer: {
     paddingHorizontal: 24,

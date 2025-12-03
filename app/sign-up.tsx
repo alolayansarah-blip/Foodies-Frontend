@@ -24,7 +24,6 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SignUpScreen() {
   const [name, setName] = useState("");
@@ -38,7 +37,6 @@ export default function SignUpScreen() {
 
   const navigation = useNavigation();
   const isLoading = useNavigationLoading();
-  const insets = useSafeAreaInsets();
   const { register } = useAuth();
 
   // Animation values
@@ -179,16 +177,13 @@ export default function SignUpScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: insets.top + 60 },
-          ]}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: 60 }]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
             {/* Back Button Header */}
             <TouchableOpacity
-              style={[styles.backButton, { top: insets.top + 10 }]}
+              style={[styles.backButton, { top: 10 }]}
               onPress={() => router.back()}
             >
               <Ionicons

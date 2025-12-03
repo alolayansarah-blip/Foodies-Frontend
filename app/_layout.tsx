@@ -5,12 +5,12 @@ import {
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { RecipesProvider } from "@/contexts/RecipesContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { RecipesProvider } from "@/contexts/RecipesContext";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 // Custom fade transition without darkening overlay
 const forFade = ({ current }: { current: { progress: number } }) => ({
@@ -31,61 +31,46 @@ export default function RootLayout() {
           <ThemeProvider
             value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
           >
-          <Stack
-            initialRouteName="index"
-            screenOptions={{
-              headerShown: false,
-              // Use fade transition to avoid darkening overlay
-              cardStyleInterpolator: forFade,
-              // Remove the overlay that causes darkening
-              cardOverlayEnabled: false,
-              // Use transparent background to prevent darkening
-              cardStyle: { backgroundColor: "transparent" },
-            }}
-          >
-            <Stack.Screen
-              name="sign-in"
-              options={{
-                headerShown: false,
-                presentation: "card",
-                cardStyleInterpolator: forFade,
-                cardOverlayEnabled: false,
-                cardStyle: { backgroundColor: "transparent" },
+            <Stack
+              initialRouteName="index"
+              screenOptions={{
+                headerShown: true,
+                contentStyle: { backgroundColor: "transparent" },
               }}
-            />
-            <Stack.Screen
-              name="sign-up"
-              options={{
-                headerShown: false,
-                presentation: "card",
-                cardStyleInterpolator: forFade,
-                cardOverlayEnabled: false,
-                cardStyle: { backgroundColor: "transparent" },
-              }}
-            />
-            <Stack.Screen
-              name="(tabs)"
-              options={{
-                headerShown: false,
-                cardStyleInterpolator: forFade,
-                cardOverlayEnabled: false,
-                cardStyle: { backgroundColor: "transparent" },
-              }}
-            />
-            <Stack.Screen
-              name="modal"
-              options={{
-                presentation: "modal",
-                title: "Modal",
-                cardStyleInterpolator: forFade,
-                cardOverlayEnabled: false,
-                cardStyle: { backgroundColor: "transparent" },
-              }}
-            />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </RecipesProvider>
+            >
+              <Stack.Screen
+                name="sign-in"
+                options={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: "transparent" },
+                }}
+              />
+              <Stack.Screen
+                name="sign-up"
+                options={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: "transparent" },
+                }}
+              />
+              <Stack.Screen
+                name="(tabs)"
+                options={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: "transparent" },
+                }}
+              />
+              <Stack.Screen
+                name="modal"
+                options={{
+                  presentation: "modal",
+                  title: "Modal",
+                  contentStyle: { backgroundColor: "transparent" },
+                }}
+              />
+            </Stack>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </RecipesProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

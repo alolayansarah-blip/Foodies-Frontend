@@ -1,5 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { getRecipeById } from "@/services/recipes";
+import RecipeType from "@/types/RecipeType";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -10,9 +12,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import RecipeType from "@/types/RecipeType";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const API_BASE_URL = "http://134.122.96.197:3000";
 
@@ -42,7 +45,8 @@ export default function RecipeDetailScreen() {
         const mappedRecipe: RecipeType = {
           id: recipeData.id || (recipeData as any)._id || id,
           title: recipeData.title || (recipeData as any).name || "",
-          date: recipeData.date || recipeData.createdAt || new Date().toISOString(),
+          date:
+            recipeData.date || recipeData.createdAt || new Date().toISOString(),
           createdAt: recipeData.createdAt || new Date().toISOString(),
           updatedAt: recipeData.updatedAt || new Date().toISOString(),
           comments: (recipeData as any).comments || 0,
@@ -52,8 +56,12 @@ export default function RecipeDetailScreen() {
           description: recipeData.description || "",
           user: (recipeData as any).user || {
             _id: recipeData.user_id || (recipeData as any).userId || "",
-            userName: (recipeData as any).user?.userName || (recipeData as any).user?.name || "Unknown Chef",
-            userProfilePicture: (recipeData as any).user?.userProfilePicture || null,
+            userName:
+              (recipeData as any).user?.userName ||
+              (recipeData as any).user?.name ||
+              "Unknown Chef",
+            userProfilePicture:
+              (recipeData as any).user?.userProfilePicture || null,
           },
           category: (recipeData as any).category || [],
         };
@@ -73,7 +81,10 @@ export default function RecipeDetailScreen() {
           const mappedRecipe: RecipeType = {
             id: recipeData.id || recipeData._id || id,
             title: recipeData.title || recipeData.name || "",
-            date: recipeData.date || recipeData.createdAt || new Date().toISOString(),
+            date:
+              recipeData.date ||
+              recipeData.createdAt ||
+              new Date().toISOString(),
             createdAt: recipeData.createdAt || new Date().toISOString(),
             updatedAt: recipeData.updatedAt || new Date().toISOString(),
             comments: recipeData.comments || 0,
@@ -83,7 +94,10 @@ export default function RecipeDetailScreen() {
             description: recipeData.description || "",
             user: recipeData.user || {
               _id: recipeData.user_id || recipeData.userId || "",
-              userName: recipeData.user?.userName || recipeData.user?.name || "Unknown Chef",
+              userName:
+                recipeData.user?.userName ||
+                recipeData.user?.name ||
+                "Unknown Chef",
               userProfilePicture: recipeData.user?.userProfilePicture || null,
             },
             category: recipeData.category || [],
@@ -118,10 +132,15 @@ export default function RecipeDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <SafeAreaView style={styles.container} edges={["top"]}>
+        <SafeAreaView
+          style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+          edges={["top", "bottom"]}
+        >
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#fff" />
-            <ThemedText style={styles.loadingText}>Loading recipe...</ThemedText>
+            <ThemedText style={styles.loadingText}>
+              Loading recipe...
+            </ThemedText>
           </View>
         </SafeAreaView>
       </View>
@@ -131,7 +150,10 @@ export default function RecipeDetailScreen() {
   if (error || !recipe) {
     return (
       <View style={styles.container}>
-        <SafeAreaView style={styles.container} edges={["top"]}>
+        <SafeAreaView
+          style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+          edges={["top", "bottom"]}
+        >
           <View style={styles.errorContainer}>
             <ThemedText style={styles.errorText}>
               {error || "Recipe not found"}
@@ -157,7 +179,7 @@ export default function RecipeDetailScreen() {
         <View style={styles.circle3} />
       </View>
 
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[
@@ -400,4 +422,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
-

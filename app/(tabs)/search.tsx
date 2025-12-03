@@ -1,9 +1,12 @@
 import { SearchSkeleton } from "@/components/skeleton";
 import { ThemedText } from "@/components/themed-text";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useState } from "react";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -46,6 +49,20 @@ export default function SearchScreen() {
   const [activeCategory, setActiveCategory] = useState<CategoryType>("All");
   const isLoading = useNavigationLoading();
   const insets = useSafeAreaInsets();
+  const { logout } = useAuth();
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+        },
+      },
+    ]);
+  };
 
   const categories: CategoryType[] = [
     "All",
@@ -84,7 +101,10 @@ export default function SearchScreen() {
   const isSearching = searchQuery.length > 0;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+      edges={["top", "bottom"]}
+    >
       {/* Creative Background Elements */}
       <View style={styles.backgroundElements}>
         <View style={styles.circle1} />
@@ -92,159 +112,168 @@ export default function SearchScreen() {
         <View style={styles.circle3} />
       </View>
 
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={[styles.content, { paddingTop: insets.top + 10 }]}>
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <View style={styles.searchBar}>
-              <Ionicons
-                name="search-outline"
-                size={20}
-                color="rgba(255, 255, 255, 0.8)"
-              />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search recipes..."
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                value={searchQuery}
-                onChangeText={handleSearch}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={clearSearch}>
-                  <Ionicons
-                    name="close-circle"
-                    size={20}
-                    color="rgba(255, 255, 255, 0.7)"
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft} />
+        <View style={styles.headerCenter}>
+          <Image
+            source={require("@/assets/images/logo2.png")}
+            style={styles.headerLogo}
+            contentFit="contain"
+          />
+        </View>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
-          {isSearching ? (
-            /* Search Results */
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {searchResults.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <Ionicons
-                    name="search-outline"
-                    size={60}
-                    color="rgba(255, 255, 255, 0.6)"
-                  />
-                  <ThemedText style={styles.emptyText}>
-                    No results found
-                  </ThemedText>
-                  <ThemedText style={styles.emptySubtext}>
-                    Try a different search term
-                  </ThemedText>
-                </View>
-              ) : (
-                <View style={styles.resultsContainer}>
-                  <ThemedText style={styles.resultsHeader}>
-                    {searchResults.length} result
-                    {searchResults.length !== 1 ? "s" : ""} found
-                  </ThemedText>
-                  {searchResults.map((recipe) => (
-                    <TouchableOpacity key={recipe.id} style={styles.resultItem}>
-                      <View style={styles.resultContent}>
-                        <ThemedText style={styles.resultName}>
-                          {recipe.name}
+      <View style={[styles.content, { paddingTop: 10 }]}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Ionicons
+              name="search-outline"
+              size={20}
+              color="rgba(255, 255, 255, 0.8)"
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search recipes..."
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              value={searchQuery}
+              onChangeText={handleSearch}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch}>
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color="rgba(255, 255, 255, 0.7)"
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {isSearching ? (
+          /* Search Results */
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {searchResults.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons
+                  name="search-outline"
+                  size={60}
+                  color="rgba(255, 255, 255, 0.6)"
+                />
+                <ThemedText style={styles.emptyText}>
+                  No results found
+                </ThemedText>
+                <ThemedText style={styles.emptySubtext}>
+                  Try a different search term
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={styles.resultsContainer}>
+                <ThemedText style={styles.resultsHeader}>
+                  {searchResults.length} result
+                  {searchResults.length !== 1 ? "s" : ""} found
+                </ThemedText>
+                {searchResults.map((recipe) => (
+                  <TouchableOpacity key={recipe.id} style={styles.resultItem}>
+                    <View style={styles.resultContent}>
+                      <ThemedText style={styles.resultName}>
+                        {recipe.name}
+                      </ThemedText>
+                      <View style={styles.resultMeta}>
+                        <ThemedText style={styles.resultCategory}>
+                          {recipe.category}
                         </ThemedText>
-                        <View style={styles.resultMeta}>
-                          <ThemedText style={styles.resultCategory}>
-                            {recipe.category}
+                        <View style={styles.ratingContainer}>
+                          <Ionicons name="star" size={14} color="#ffa500" />
+                          <ThemedText style={styles.rating}>
+                            {recipe.rating}
                           </ThemedText>
-                          <View style={styles.ratingContainer}>
-                            <Ionicons name="star" size={14} color="#ffa500" />
-                            <ThemedText style={styles.rating}>
-                              {recipe.rating}
-                            </ThemedText>
-                          </View>
                         </View>
                       </View>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={20}
-                        color="rgba(255, 255, 255, 0.7)"
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </ScrollView>
-          ) : (
-            /* Explore Grid View */
-            <View style={styles.exploreContainer}>
-              {/* Category Tabs */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.categoryScroll}
-                contentContainerStyle={styles.categoryContainer}
-              >
-                {categories.map((category) => (
-                  <TouchableOpacity
-                    key={category}
-                    onPress={() => setActiveCategory(category)}
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="rgba(255, 255, 255, 0.7)"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+        ) : (
+          /* Explore Grid View */
+          <View style={styles.exploreContainer}>
+            {/* Category Tabs */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.categoryScroll}
+              contentContainerStyle={styles.categoryContainer}
+            >
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category}
+                  onPress={() => setActiveCategory(category)}
+                  style={[
+                    styles.categoryTab,
+                    activeCategory === category && styles.activeCategoryTab,
+                  ]}
+                >
+                  <ThemedText
                     style={[
-                      styles.categoryTab,
-                      activeCategory === category && styles.activeCategoryTab,
+                      styles.categoryText,
+                      activeCategory === category && styles.activeCategoryText,
                     ]}
                   >
-                    <ThemedText
-                      style={[
-                        styles.categoryText,
-                        activeCategory === category &&
-                          styles.activeCategoryText,
-                      ]}
-                    >
-                      {category}
+                    {category}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Recipe Grid */}
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.gridContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.recipeGrid}>
+                {mockExploreRecipes.map((recipe) => (
+                  <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
+                    <View style={styles.recipeImageContainer}>
+                      {recipe.image ? (
+                        <View style={styles.recipeImagePlaceholder} />
+                      ) : (
+                        <Ionicons
+                          name="restaurant-outline"
+                          size={30}
+                          color="rgba(255, 255, 255, 0.7)"
+                        />
+                      )}
+                    </View>
+                    <ThemedText style={styles.recipeCardName} numberOfLines={1}>
+                      {recipe.name}
                     </ThemedText>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
-
-              {/* Recipe Grid */}
-              <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.gridContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <View style={styles.recipeGrid}>
-                  {mockExploreRecipes.map((recipe) => (
-                    <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
-                      <View style={styles.recipeImageContainer}>
-                        {recipe.image ? (
-                          <View style={styles.recipeImagePlaceholder} />
-                        ) : (
-                          <Ionicons
-                            name="restaurant-outline"
-                            size={30}
-                            color="rgba(255, 255, 255, 0.7)"
-                          />
-                        )}
-                      </View>
-                      <ThemedText
-                        style={styles.recipeCardName}
-                        numberOfLines={1}
-                      >
-                        {recipe.name}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      </SafeAreaView>
-    </View>
+              </View>
+            </ScrollView>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -288,6 +317,38 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.025)",
     top: "40%",
     right: 20,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    paddingTop: 10,
+    backgroundColor: "transparent",
+    zIndex: 10,
+  },
+  headerLeft: {
+    width: 40,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerLogo: {
+    width: 200,
+    height: 100,
+  },
+  signOutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   content: {
     flex: 1,

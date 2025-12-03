@@ -1,14 +1,17 @@
+import { PageSkeleton } from "@/components/skeleton";
+import { ThemedText } from "@/components/themed-text";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import {
-  StyleSheet,
+  Alert,
   ScrollView,
+  StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
-import { ThemedText } from "@/components/themed-text";
-import { Ionicons } from "@expo/vector-icons";
-import { PageSkeleton } from "@/components/skeleton";
-import { useNavigationLoading } from "@/hooks/use-navigation-loading";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Mock notifications data
 const mockNotifications = [
@@ -48,7 +51,20 @@ const mockNotifications = [
 
 export default function NotificationsScreen() {
   const isLoading = useNavigationLoading();
-  const insets = useSafeAreaInsets();
+  const { logout } = useAuth();
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+        },
+      },
+    ]);
+  };
 
   if (isLoading) {
     return (
@@ -59,7 +75,10 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+      edges={["top", "bottom"]}
+    >
       {/* Creative Background Elements */}
       <View style={styles.backgroundElements}>
         <View style={styles.circle1} />
@@ -67,12 +86,22 @@ export default function NotificationsScreen() {
         <View style={styles.circle3} />
       </View>
 
-      <View style={[styles.content, { paddingTop: insets.top + 10 }]}>
-        <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>
-            Notifications
-          </ThemedText>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft} />
+        <View style={styles.headerCenter}>
+          <Image
+            source={require("@/assets/images/logo2.png")}
+            style={styles.headerLogo}
+            contentFit="contain"
+          />
         </View>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.content, { paddingTop: 10 }]}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -80,10 +109,12 @@ export default function NotificationsScreen() {
         >
           {mockNotifications.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="notifications-outline" size={60} color="rgba(255, 255, 255, 0.6)" />
-              <ThemedText style={styles.emptyText}>
-                No notifications
-              </ThemedText>
+              <Ionicons
+                name="notifications-outline"
+                size={60}
+                color="rgba(255, 255, 255, 0.6)"
+              />
+              <ThemedText style={styles.emptyText}>No notifications</ThemedText>
               <ThemedText style={styles.emptySubtext}>
                 You're all caught up!
               </ThemedText>
@@ -108,9 +139,7 @@ export default function NotificationsScreen() {
                       >
                         {notification.title}
                       </ThemedText>
-                      {!notification.read && (
-                        <View style={styles.unreadDot} />
-                      )}
+                      {!notification.read && <View style={styles.unreadDot} />}
                     </View>
                     <ThemedText style={styles.notificationMessage}>
                       {notification.message}
@@ -125,7 +154,7 @@ export default function NotificationsScreen() {
           )}
         </ScrollView>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -175,14 +204,36 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    paddingTop: 10,
+    backgroundColor: "transparent",
+    zIndex: 10,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff",
-    opacity: 0.95,
+  headerLeft: {
+    width: 40,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerLogo: {
+    width: 200,
+    height: 100,
+  },
+  signOutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   scrollView: {
     flex: 1,

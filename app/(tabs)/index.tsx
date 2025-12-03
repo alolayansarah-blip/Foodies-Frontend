@@ -20,7 +20,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 // Default "All" category (not stored in backend)
 const ALL_CATEGORY = { id: "all", name: "All", icon: "food" };
@@ -62,13 +65,6 @@ export default function HomeScreen() {
   const isLoading = useNavigationLoading();
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
-
-  // Hide navigation bar
-  useEffect(() => {
-    navigation.setOptions({
-      headerShown: false,
-    });
-  }, [navigation]);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -224,7 +220,10 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+      edges={["top", "bottom"]}
+    >
       {/* Creative Background Elements */}
       <View style={styles.backgroundElements}>
         <View style={styles.circle1} />
@@ -233,7 +232,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <View style={styles.header}>
         <View style={styles.headerLeft} />
         <View style={styles.headerCenter}>
           <Image
@@ -595,7 +594,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -646,9 +645,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingBottom: 15,
-    backgroundColor: "rgba(26, 77, 46, 0.9)",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    paddingTop: 10,
+    backgroundColor: "transparent",
     zIndex: 10,
   },
   headerLeft: {
@@ -660,8 +658,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerLogo: {
-    width: 180,
-    height: 75,
+    width: 200,
+    height: 100,
   },
   signOutButton: {
     width: 40,

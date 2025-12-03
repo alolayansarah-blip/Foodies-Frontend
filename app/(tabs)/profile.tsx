@@ -43,7 +43,20 @@ const mockSavedRecipes = [
 
 export default function ProfileScreen() {
   const { myRecipes } = useRecipes();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+        },
+      },
+    ]);
+  };
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userName, setUserName] = useState(
     user?.name ||
@@ -159,7 +172,7 @@ export default function ProfileScreen() {
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri;
         setProfileImage(imageUri);
-        
+
         // Upload image to backend as FormData
         if (user) {
           const userId = user.id || (user as any)?._id;
@@ -169,7 +182,10 @@ export default function ProfileScreen() {
               Alert.alert("Success", "Profile image uploaded successfully!");
             } catch (uploadError) {
               console.error("Error uploading profile image:", uploadError);
-              Alert.alert("Error", "Failed to upload profile image. Please try again.");
+              Alert.alert(
+                "Error",
+                "Failed to upload profile image. Please try again."
+              );
             }
           }
         }
@@ -271,19 +287,40 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+        edges={["top", "bottom"]}
+      >
         <ProfileSkeleton />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+      edges={["top", "bottom"]}
+    >
       {/* Creative Background Elements */}
       <View style={styles.backgroundElements}>
         <View style={styles.circle1} />
         <View style={styles.circle2} />
         <View style={styles.circle3} />
+      </View>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft} />
+        <View style={styles.headerCenter}>
+          <Image
+            source={require("@/assets/images/logo2.png")}
+            style={styles.headerLogo}
+            contentFit="contain"
+          />
+        </View>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -601,7 +638,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -645,6 +682,38 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.025)",
     top: "40%",
     right: 20,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    paddingTop: 10,
+    backgroundColor: "transparent",
+    zIndex: 10,
+  },
+  headerLeft: {
+    width: 40,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerLogo: {
+    width: 200,
+    height: 100,
+  },
+  signOutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   scrollView: {
     flex: 1,

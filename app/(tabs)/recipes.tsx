@@ -1,13 +1,18 @@
 import Recipe from "@/components/Recipe";
 import { ThemedText } from "@/components/themed-text";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 import RecipeType from "@/types/RecipeType";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from "react-native";
 import {
@@ -112,6 +117,20 @@ export default function RecipesScreen() {
   const [error, setError] = useState<string | null>(null);
   const navigationLoading = useNavigationLoading();
   const insets = useSafeAreaInsets();
+  const { logout } = useAuth();
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+        },
+      },
+    ]);
+  };
 
   const fetchRecipes = async () => {
     try {
@@ -195,7 +214,10 @@ export default function RecipesScreen() {
           <View style={styles.circle2} />
           <View style={styles.circle3} />
         </View>
-        <SafeAreaView style={styles.container} edges={["top"]}>
+        <SafeAreaView
+          style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+          edges={["top", "bottom"]}
+        >
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#fff" />
           </View>
@@ -213,13 +235,48 @@ export default function RecipesScreen() {
         <View style={styles.circle3} />
       </View>
 
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-            <ThemedText style={styles.title}>Recipes</ThemedText>
-            {error && <ThemedText style={styles.errorText}>{error}</ThemedText>}
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+        edges={["top", "bottom"]}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft} />
+          <View style={styles.headerCenter}>
+            <Image
+              source={require("@/assets/images/logo2.png")}
+              style={styles.headerLogo}
+              contentFit="contain"
+            />
           </View>
+          <TouchableOpacity
+            style={styles.signOutButton}
+            onPress={handleSignOut}
+          >
+            <Ionicons name="log-out-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft} />
+          <View style={styles.headerCenter}>
+            <Image
+              source={require("@/assets/images/logo2.png")}
+              style={styles.headerLogo}
+              contentFit="contain"
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.signOutButton}
+            onPress={handleSignOut}
+          >
+            <Ionicons name="log-out-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.content}>
+          {error && <ThemedText style={styles.errorText}>{error}</ThemedText>}
 
           {/* Recipes List */}
           {isLoading ? (
@@ -314,6 +371,38 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.025)",
     top: "40%",
     right: 20,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    paddingTop: 10,
+    backgroundColor: "transparent",
+    zIndex: 10,
+  },
+  headerLeft: {
+    width: 40,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerLogo: {
+    width: 200,
+    height: 100,
+  },
+  signOutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   content: {
     flex: 1,
