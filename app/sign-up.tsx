@@ -1,30 +1,30 @@
-import { useState, useEffect } from "react";
+import { PageSkeleton } from "@/components/skeleton";
+import { ThemedText } from "@/components/themed-text";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { router, useNavigation } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
-import { router, useNavigation } from "expo-router";
-import { ThemedText } from "@/components/themed-text";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import { PageSkeleton } from "@/components/skeleton";
-import { useNavigationLoading } from "@/hooks/use-navigation-loading";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "@/contexts/AuthContext";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withTiming,
-  withSpring,
   withDelay,
+  withRepeat,
+  withSpring,
+  withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SignUpScreen() {
   const [name, setName] = useState("");
@@ -129,7 +129,8 @@ export default function SignUpScreen() {
       // Navigation is handled by AuthContext after successful registration
     } catch (error: any) {
       console.error("Sign up error:", error);
-      const errorMsg = error?.message || "Failed to create account. Please try again.";
+      const errorMsg =
+        error?.message || "Failed to create account. Please try again.";
       setErrorMessage(errorMsg);
       Alert.alert("Sign Up Failed", errorMsg);
     } finally {
@@ -296,7 +297,7 @@ export default function SignUpScreen() {
                     style={styles.inputIcon}
                   />
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: "#080808" }]}
                     placeholder="Enter your password"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={password}
@@ -338,7 +339,7 @@ export default function SignUpScreen() {
                     style={styles.inputIcon}
                   />
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: "#080808" }]}
                     placeholder="Confirm your password"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={confirmPassword}
@@ -374,7 +375,10 @@ export default function SignUpScreen() {
               <TouchableOpacity
                 onPress={handleSignUp}
                 activeOpacity={0.85}
-                style={[styles.primaryButton, isSubmitting && styles.primaryButtonDisabled]}
+                style={[
+                  styles.primaryButton,
+                  isSubmitting && styles.primaryButtonDisabled,
+                ]}
                 disabled={isSubmitting}
               >
                 <View style={styles.buttonContent}>
@@ -383,7 +387,11 @@ export default function SignUpScreen() {
                   </ThemedText>
                   {!isSubmitting && (
                     <View style={styles.buttonArrowContainer}>
-                      <Ionicons name="arrow-forward" size={18} color="#1a4d2e" />
+                      <Ionicons
+                        name="arrow-forward"
+                        size={18}
+                        color="#1a4d2e"
+                      />
                     </View>
                   )}
                 </View>
@@ -583,7 +591,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     fontSize: 16,
-    color: "#fff",
+    color: "#080808",
     backgroundColor: "transparent",
     letterSpacing: 0.3,
   },

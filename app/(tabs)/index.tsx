@@ -1,26 +1,26 @@
-import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  ScrollView,
-  Alert,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
-import { useState, useEffect } from "react";
-import { router, useNavigation } from "expo-router";
+import { PageSkeleton } from "@/components/skeleton";
 import { ThemedText } from "@/components/themed-text";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { Category, createCategory, getCategories } from "@/services/categories";
+import { getRecipes, Recipe } from "@/services/recipes";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { PageSkeleton } from "@/components/skeleton";
-import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { useNavigation } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "@/contexts/AuthContext";
-import { getCategories, createCategory, Category } from "@/services/categories";
-import { getRecipes, Recipe } from "@/services/recipes";
-import { ActivityIndicator } from "react-native";
 
 // Default "All" category (not stored in backend)
 const ALL_CATEGORY = { id: "all", name: "All", icon: "food" };
@@ -45,10 +45,11 @@ const availableIcons = [
   "carrot",
 ];
 
-
 export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [categories, setCategories] = useState<Array<Category & { icon?: string }>>([ALL_CATEGORY]);
+  const [categories, setCategories] = useState<
+    Array<Category & { icon?: string }>
+  >([ALL_CATEGORY]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAllRecipesModal, setShowAllRecipesModal] = useState(false);
@@ -83,14 +84,14 @@ export default function HomeScreen() {
     try {
       setIsLoadingCategories(true);
       const apiCategories = await getCategories();
-      
+
       // Ensure apiCategories is an array
       if (!Array.isArray(apiCategories)) {
         console.error("Categories response is not an array:", apiCategories);
         setCategories([ALL_CATEGORY]);
         return;
       }
-      
+
       // Map API categories and add icon field (using first letter or default)
       // Backend uses _id, so map it to id for frontend
       const mappedCategories = apiCategories.map((cat) => ({
@@ -113,24 +114,26 @@ export default function HomeScreen() {
     try {
       setIsLoadingRecipes(true);
       const params: any = {};
-      
+
       // If a specific category is selected (not "all"), filter by category_id
       if (selectedCategory !== "all") {
-        const selectedCat = categories.find((cat) => cat.id === selectedCategory);
+        const selectedCat = categories.find(
+          (cat) => cat.id === selectedCategory
+        );
         if (selectedCat?.id && selectedCat.id !== "all") {
           params.category_id = selectedCat.id;
         }
       }
-      
+
       const apiRecipes = await getRecipes(params);
-      
+
       // Ensure apiRecipes is an array
       if (!Array.isArray(apiRecipes)) {
         console.error("Recipes response is not an array:", apiRecipes);
         setRecipes([]);
         return;
       }
-      
+
       // Map API recipes to match our format
       // Backend uses _id, so map it to id for frontend
       const mappedRecipes = apiRecipes.map((recipe) => ({
@@ -172,7 +175,8 @@ export default function HomeScreen() {
     // Check if category name already exists
     if (
       categories.some(
-        (cat) => cat.name?.toLowerCase() === newCategoryName.trim().toLowerCase()
+        (cat) =>
+          cat.name?.toLowerCase() === newCategoryName.trim().toLowerCase()
       )
     ) {
       Alert.alert("Error", "A category with this name already exists");
@@ -185,14 +189,14 @@ export default function HomeScreen() {
         categoryName: newCategoryName.trim(),
         name: newCategoryName.trim(),
       });
-      
+
       // Add to local state with icon
       const categoryWithIcon = {
         ...newCategory,
         name: newCategory.categoryName || newCategory.name || "",
         icon: selectedIcon,
       };
-      
+
       setCategories([ALL_CATEGORY, ...categories.slice(1), categoryWithIcon]);
       setNewCategoryName("");
       setSelectedIcon("food");
@@ -209,9 +213,7 @@ export default function HomeScreen() {
   const filteredRecipes =
     selectedCategory === "all"
       ? recipes
-      : recipes.filter(
-          (recipe) => recipe.category_id === selectedCategory
-        );
+      : recipes.filter((recipe) => recipe.category_id === selectedCategory);
 
   if (isLoading) {
     return (
@@ -265,7 +267,8 @@ export default function HomeScreen() {
                   key={category.id}
                   style={[
                     styles.categoryChip,
-                    selectedCategory === category.id && styles.categoryChipActive,
+                    selectedCategory === category.id &&
+                      styles.categoryChipActive,
                   ]}
                   onPress={() => setSelectedCategory(category.id)}
                 >
@@ -318,67 +321,70 @@ export default function HomeScreen() {
             </View>
           ) : (
             filteredRecipes.map((recipe) => (
-            <TouchableOpacity
-              key={recipe.id}
-              style={styles.recipeCard}
-              activeOpacity={0.8}
-            >
-              <View style={styles.recipeImageContainer}>
-                {recipe.image ? (
-                  <Image
-                    source={{ uri: recipe.image }}
-                    style={styles.recipeImage}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View style={styles.recipeImagePlaceholder}>
-                    <MaterialCommunityIcons
-                      name="food"
-                      size={40}
-                      color="#fff"
+              <TouchableOpacity
+                key={recipe.id}
+                style={styles.recipeCard}
+                activeOpacity={0.8}
+              >
+                <View style={styles.recipeImageContainer}>
+                  {recipe.image ? (
+                    <Image
+                      source={{ uri: recipe.image }}
+                      style={styles.recipeImage}
+                      contentFit="cover"
                     />
-                  </View>
-                )}
-              </View>
-              <View style={styles.recipeContent}>
-                <ThemedText style={styles.recipeName} numberOfLines={1}>
-                  {recipe.name}
-                </ThemedText>
-                <ThemedText style={styles.recipeDescription} numberOfLines={2}>
-                  {recipe.description}
-                </ThemedText>
-                <View style={styles.recipeMeta}>
-                  <View style={styles.recipeMetaItem}>
-                    <Ionicons name="time-outline" size={14} color="#fff" />
-                    <ThemedText style={styles.recipeMetaText}>
-                      {recipe.time}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.recipeMetaItem}>
-                    <MaterialCommunityIcons
-                      name="chef-hat"
-                      size={14}
-                      color="#fff"
-                    />
-                    <ThemedText style={styles.recipeMetaText}>
-                      {recipe.difficulty}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.recipeMetaItem}>
-                    <Ionicons name="flame-outline" size={14} color="#fff" />
-                    <ThemedText style={styles.recipeMetaText}>
-                      {recipe.calories} kcal
-                    </ThemedText>
-                  </View>
+                  ) : (
+                    <View style={styles.recipeImagePlaceholder}>
+                      <MaterialCommunityIcons
+                        name="food"
+                        size={40}
+                        color="#fff"
+                      />
+                    </View>
+                  )}
                 </View>
-                <View style={styles.recipeRating}>
-                  <Ionicons name="star" size={16} color="#ffa500" />
-                  <ThemedText style={styles.recipeRatingText}>
-                    {recipe.rating}
+                <View style={styles.recipeContent}>
+                  <ThemedText style={styles.recipeName} numberOfLines={1}>
+                    {recipe.name}
                   </ThemedText>
+                  <ThemedText
+                    style={styles.recipeDescription}
+                    numberOfLines={2}
+                  >
+                    {recipe.description}
+                  </ThemedText>
+                  <View style={styles.recipeMeta}>
+                    <View style={styles.recipeMetaItem}>
+                      <Ionicons name="time-outline" size={14} color="#fff" />
+                      <ThemedText style={styles.recipeMetaText}>
+                        {recipe.time}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.recipeMetaItem}>
+                      <MaterialCommunityIcons
+                        name="chef-hat"
+                        size={14}
+                        color="#fff"
+                      />
+                      <ThemedText style={styles.recipeMetaText}>
+                        {recipe.difficulty}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.recipeMetaItem}>
+                      <Ionicons name="flame-outline" size={14} color="#fff" />
+                      <ThemedText style={styles.recipeMetaText}>
+                        {recipe.calories} kcal
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={styles.recipeRating}>
+                    <Ionicons name="star" size={16} color="#ffa500" />
+                    <ThemedText style={styles.recipeRatingText}>
+                      {recipe.rating}
+                    </ThemedText>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
             ))
           )}
         </View>
@@ -429,6 +435,7 @@ export default function HomeScreen() {
               </View>
 
               {/* Icon Selection */}
+
               <View style={styles.iconSelectionContainer}>
                 <ThemedText style={styles.inputLabel}>Select Icon</ThemedText>
                 <ScrollView
@@ -457,7 +464,10 @@ export default function HomeScreen() {
 
               {/* Create Button */}
               <TouchableOpacity
-                style={[styles.createButton, isCreatingCategory && styles.createButtonDisabled]}
+                style={[
+                  styles.createButton,
+                  isCreatingCategory && styles.createButtonDisabled,
+                ]}
                 onPress={handleCreateCategory}
                 activeOpacity={0.85}
                 disabled={isCreatingCategory}
@@ -731,7 +741,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingTop: 20,
     paddingBottom: 40,
-    maxHeight: "80%",
+    maxHeight: "90%",
+    height: "80%",
   },
   modalHeader: {
     flexDirection: "row",

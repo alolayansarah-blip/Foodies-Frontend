@@ -1,19 +1,24 @@
-import Constants from 'expo-constants';
+import Constants from "expo-constants";
 
-// Get API base URL from environment variables via expo-constants
-const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl;
+// Prefer value from Expo config / env, but fall back to the known backend URL
+const envApiBaseUrl =
+  Constants.expoConfig?.extra?.apiBaseUrl || process.env.API_BASE_URL;
 
-if (!API_BASE_URL) {
-  console.error('API_BASE_URL is not defined. Please create a .env file with API_BASE_URL set.');
-  throw new Error(
-    'API_BASE_URL is not defined. Please create a .env file with API_BASE_URL set.'
+// Fallback URL for development if env is not configured
+const DEFAULT_API_BASE_URL = "http://134.122.96.197:3000";
+
+const API_BASE_URL = envApiBaseUrl || DEFAULT_API_BASE_URL;
+
+if (!envApiBaseUrl) {
+  console.warn(
+    `API_BASE_URL not found in env / app config. Falling back to default: ${DEFAULT_API_BASE_URL}`
   );
 }
 
 // Ensure URL doesn't have trailing slash
-const cleanUrl = API_BASE_URL.toString().replace(/\/$/, '');
+const cleanUrl = API_BASE_URL.toString().replace(/\/$/, "");
 
-console.log('API Base URL configured:', cleanUrl);
+console.log("API Base URL configured:", cleanUrl);
 
 export const config = {
   API_BASE_URL: cleanUrl,

@@ -1,27 +1,29 @@
-import { useState } from "react";
+import { ProfileSkeleton } from "@/components/skeleton";
+import { ThemedText } from "@/components/themed-text";
+import { Collapsible } from "@/components/ui/collapsible";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRecipes } from "@/contexts/RecipesContext";
+import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { getRecipes, Recipe } from "@/services/recipes";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { useEffect, useState } from "react";
 import {
-  StyleSheet,
+  Alert,
+  Modal,
+  Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
   TouchableOpacity,
   View,
-  Alert,
-  Platform,
-  TextInput,
-  Modal,
-  ImageBackground,
 } from "react-native";
 import {
-  useSafeAreaInsets,
   SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import * as ImagePicker from "expo-image-picker";
-import { Image } from "expo-image";
-import { ThemedText } from "@/components/themed-text";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { Collapsible } from "@/components/ui/collapsible";
-import { ProfileSkeleton } from "@/components/skeleton";
-import { useNavigationLoading } from "@/hooks/use-navigation-loading";
-import { useRecipes } from "@/contexts/RecipesContext";
 
 // Mock data for recipes
 const mockRecipes = [
@@ -40,19 +42,78 @@ const mockSavedRecipes = [
 
 export default function ProfileScreen() {
   const { myRecipes } = useRecipes();
+  const { user } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [userName, setUserName] = useState("John Doe");
+  const [userName, setUserName] = useState(
+    user?.name ||
+      (user as any)?.username ||
+      user?.email?.split("@")[0] ||
+      "Guest"
+  );
   const [isEditingName, setIsEditingName] = useState(false);
   const [bio, setBio] = useState(
     "Food enthusiast and home chef. Love experimenting with new recipes!"
   );
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [gender, setGender] = useState("Prefer not to say");
-  const [selectedRecipe, setSelectedRecipe] = useState<
-    (typeof myRecipes)[0] | null
-  >(null);
+  const [userRecipes, setUserRecipes] = useState<Recipe[]>([]);
+  const [isLoadingUserRecipes, setIsLoadingUserRecipes] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const isLoading = useNavigationLoading();
   const insets = useSafeAreaInsets();
+
+  // Keep local profile name in sync with authenticated user
+  useEffect(() => {
+    if (user) {
+      setUserName(
+        user.name ||
+          (user as any)?.username ||
+          user.email?.split("@")[0] ||
+          "Guest"
+      );
+    }
+  }, [user]);
+
+  // Fetch user's uploaded recipes
+  useEffect(() => {
+    const fetchUserRecipes = async () => {
+      if (!user) {
+        setUserRecipes([]);
+        return;
+      }
+
+      try {
+        setIsLoadingUserRecipes(true);
+        const userId = user.id || (user as any)?._id;
+        if (userId) {
+          const recipes = await getRecipes({ user_id: userId });
+          // Map recipes to match the expected format
+          const mappedRecipes = recipes.map((recipe: Recipe) => ({
+            ...recipe,
+            id:
+              recipe.id ||
+              (recipe as any)?._id ||
+              String(Date.now() + Math.random()),
+            name: recipe.title || recipe.name,
+            date:
+              recipe.date ||
+              recipe.createdAt ||
+              new Date().toISOString().split("T")[0],
+          }));
+          setUserRecipes(mappedRecipes);
+        } else {
+          setUserRecipes([]);
+        }
+      } catch (error) {
+        console.error("Error fetching user recipes:", error);
+        setUserRecipes([]);
+      } finally {
+        setIsLoadingUserRecipes(false);
+      }
+    };
+
+    fetchUserRecipes();
+  }, [user]);
 
   const requestPermissions = async () => {
     if (Platform.OS !== "web") {
@@ -176,6 +237,22 @@ export default function ProfileScreen() {
     );
   };
 
+  // Format date to DD/MM/YYYY HH:MM
+  const formatTime = (dateString: string | undefined): string => {
+    if (!dateString) return "01/01/1970 00:00";
+    try {
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    } catch (error) {
+      return "01/01/1970 00:00";
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={styles.container}>
@@ -252,7 +329,9 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <ThemedText style={styles.userEmail}>john.doe@example.com</ThemedText>
+          <ThemedText style={styles.userEmail}>
+            {user?.email ?? "no-email@example.com"}
+          </ThemedText>
 
           {/* Bio Section */}
           <View style={styles.bioContainer}>
@@ -295,37 +374,53 @@ export default function ProfileScreen() {
         {/* My Recipes Section */}
         <View style={styles.section}>
           <Collapsible title="My Recipes">
-            <View style={styles.recipesGrid}>
-              {myRecipes.map((recipe) => (
-                <TouchableOpacity
-                  key={recipe.id}
-                  style={styles.recipeCard}
-                  onPress={() => setSelectedRecipe(recipe)}
-                >
-                  <View style={styles.recipeImageContainer}>
-                    {recipe.image ? (
-                      <Image
-                        source={{ uri: recipe.image }}
-                        style={styles.recipeImage}
-                        contentFit="cover"
-                      />
-                    ) : (
-                      <MaterialCommunityIcons
-                        name="food"
-                        size={40}
-                        color="rgba(255, 255, 255, 0.7)"
-                      />
-                    )}
-                  </View>
-                  <ThemedText style={styles.recipeName} numberOfLines={2}>
-                    {recipe.name}
-                  </ThemedText>
-                  <ThemedText style={styles.recipeDate}>
-                    {recipe.date}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {isLoadingUserRecipes ? (
+              <View style={styles.loadingContainer}>
+                <ThemedText style={styles.loadingText}>
+                  Loading recipes...
+                </ThemedText>
+              </View>
+            ) : userRecipes.length === 0 ? (
+              <View style={styles.emptyRecipesContainer}>
+                <ThemedText style={styles.emptyRecipesText}>
+                  No recipes uploaded yet. Create your first recipe!
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={styles.recipesGrid}>
+                {userRecipes.map((recipe) => (
+                  <TouchableOpacity
+                    key={recipe.id}
+                    style={styles.recipeCard}
+                    onPress={() => setSelectedRecipe(recipe)}
+                  >
+                    <View style={styles.recipeImageContainer}>
+                      {recipe.image ? (
+                        <Image
+                          source={{ uri: recipe.image }}
+                          style={styles.recipeImage}
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <MaterialCommunityIcons
+                          name="food"
+                          size={40}
+                          color="rgba(255, 255, 255, 0.7)"
+                        />
+                      )}
+                    </View>
+                    <ThemedText style={styles.recipeName} numberOfLines={2}>
+                      {recipe.name || recipe.title}
+                    </ThemedText>
+                    <ThemedText style={styles.recipeDate}>
+                      {recipe.date ||
+                        recipe.createdAt?.split("T")[0] ||
+                        "No date"}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </Collapsible>
         </View>
 
@@ -425,7 +520,10 @@ export default function ProfileScreen() {
               {selectedRecipe && (
                 <ScrollView
                   style={styles.modalScrollView}
-                  contentContainerStyle={styles.modalScrollContent}
+                  contentContainerStyle={[
+                    styles.modalScrollContent,
+                    { paddingTop: insets.top > 0 ? 0 : 16 },
+                  ]}
                   showsVerticalScrollIndicator={false}
                 >
                   {/* Recipe Image */}
@@ -449,18 +547,22 @@ export default function ProfileScreen() {
 
                   {/* Recipe Title */}
                   <View style={styles.modalInfoContainer}>
-                    <ThemedText style={styles.modalRecipeTitle}>
-                      {selectedRecipe.name || selectedRecipe.title}
-                    </ThemedText>
+                    <Text style={styles.modalRecipeTitle}>
+                      {selectedRecipe?.name ||
+                        selectedRecipe?.title ||
+                        "Untitled Recipe"}
+                    </Text>
 
                     {/* Recipe Date */}
                     <ThemedText style={styles.modalDate}>
-                      Posted on {selectedRecipe.date}
+                      {formatTime(
+                        selectedRecipe?.createdAt || selectedRecipe?.date
+                      )}
                     </ThemedText>
 
                     {/* Recipe Description */}
-                    {selectedRecipe.description ? (
-                      <View style={styles.modalDescriptionContainer}>
+                    {selectedRecipe?.description ? (
+                      <View style={styles.modalDescriptionWrapper}>
                         <ThemedText
                           type="defaultSemiBold"
                           style={styles.modalDescriptionLabel}
@@ -542,7 +644,7 @@ const styles = StyleSheet.create({
   },
   avatarWrapper: {
     position: "relative",
-    marginBottom: 16,
+    marginBottom: 24, // extra space so username is fully visible below avatar
   },
   avatarContainer: {
     width: 100,
@@ -670,6 +772,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: 16,
+    marginTop: 16,
   },
   recipesGrid: {
     flexDirection: "row",
@@ -703,6 +806,7 @@ const styles = StyleSheet.create({
   },
   recipeName: {
     marginBottom: 4,
+    marginTop: 8,
     fontSize: 14,
     fontWeight: "600",
     color: "#fff",
@@ -750,31 +854,42 @@ const styles = StyleSheet.create({
   },
   modalScrollContent: {
     paddingBottom: 24,
+    flexGrow: 1,
   },
   modalImageContainer: {
-    width: "100%",
-    height: 300,
-    marginBottom: 16,
-    marginHorizontal: 24,
+    width: "90%",
+    maxWidth: 350,
+    height: 200,
+    marginBottom: 24,
     marginTop: 16,
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.2)",
+    alignSelf: "center",
   },
   modalImage: {
     width: "100%",
     height: "100%",
   },
   modalImagePlaceholder: {
-    width: "100%",
-    height: 300,
+    width: "90%",
+    maxWidth: 350,
+    height: 200,
     backgroundColor: "rgba(255, 255, 255, 0.05)",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    alignSelf: "center",
   },
   modalInfoContainer: {
     paddingHorizontal: 24,
+    marginTop: 24,
+    paddingBottom: 24,
+    width: "100%",
   },
   modalTitle: {
     fontSize: 22,
@@ -786,7 +901,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
     marginBottom: 8,
+    marginTop: 10,
     opacity: 0.95,
+    flexWrap: "wrap",
+    width: "100%",
+    lineHeight: 36,
   },
   modalDate: {
     fontSize: 14,
@@ -794,7 +913,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     color: "rgba(255, 255, 255, 0.8)",
   },
-  modalDescriptionContainer: {
+  modalDescriptionWrapper: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 4,
+    padding: 16,
     marginTop: 8,
   },
   modalDescriptionLabel: {
@@ -816,5 +938,24 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     marginTop: 8,
     color: "rgba(255, 255, 255, 0.7)",
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.7)",
+  },
+  emptyRecipesContainer: {
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyRecipesText: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.7)",
+    textAlign: "center",
   },
 });

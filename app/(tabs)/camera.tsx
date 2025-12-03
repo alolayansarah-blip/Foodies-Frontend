@@ -1,22 +1,23 @@
-import { useState, useEffect } from "react";
+import { ThemedText } from "@/components/themed-text";
+import { useRecipes } from "@/contexts/RecipesContext";
+import { Category, getCategories } from "@/services/categories";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
-  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   ScrollView,
+  StyleSheet,
+  TextInput,
   TouchableOpacity,
   View,
-  Alert,
-  Platform,
-  TextInput,
-  Modal,
-  KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as ImagePicker from "expo-image-picker";
-import { Image } from "expo-image";
-import { ThemedText } from "@/components/themed-text";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRecipes } from "@/contexts/RecipesContext";
-import { getCategories, Category } from "@/services/categories";
 
 const difficultyOptions = ["Easy", "Medium", "Hard"];
 
@@ -25,15 +26,25 @@ export default function CameraScreen() {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [currentImageUri, setCurrentImageUri] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Array<Category & { icon?: string }>>([]);
+  const [categories, setCategories] = useState<
+    Array<Category & { icon?: string }>
+  >([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const insets = useSafeAreaInsets();
 
-  // Fetch categories from API
+  // Fetch categories from API once on mount
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Also refetch categories whenever this tab comes back into focus,
+  // so newly created categories on the Home tab show up here.
+  useFocusEffect(
+    useCallback(() => {
+      fetchCategories();
+    }, [])
+  );
 
   const fetchCategories = async () => {
     try {
@@ -373,8 +384,9 @@ export default function CameraScreen() {
                       !selectedCategoryId && styles.placeholderText,
                     ]}
                   >
-                    {selectedCategoryId 
-                      ? categories.find(c => c.id === selectedCategoryId)?.name || "Selected"
+                    {selectedCategoryId
+                      ? categories.find((c) => c.id === selectedCategoryId)
+                          ?.name || "Selected"
                       : "Select a category"}
                   </ThemedText>
                   <Ionicons

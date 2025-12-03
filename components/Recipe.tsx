@@ -50,7 +50,7 @@ const Recipe = ({ recipe }: { recipe: RecipeType }) => {
             opacity: 0.8,
           }}
         >
-          Created By: {recipe.user.userName}
+          Created By: {recipe.user?.userName ?? "Unknown Chef"}
         </Text>
 
         {/* Recipe Info Row */}
@@ -124,7 +124,7 @@ const Recipe = ({ recipe }: { recipe: RecipeType }) => {
             alignItems: "center",
             marginBottom: 5,
           }}
-          onPress={() => router.push(`/recipe/${recipe.id}`)}
+          onPress={() => router.push(`/(tabs)/recipes`)}
         >
           <Text
             style={{

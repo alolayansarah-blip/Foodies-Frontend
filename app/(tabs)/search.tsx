@@ -1,6 +1,7 @@
 import { SearchSkeleton } from "@/components/skeleton";
 import { ThemedText } from "@/components/themed-text";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
   ScrollView,
@@ -13,7 +14,6 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 
 // Mock recipes for grid view
 const mockExploreRecipes = [
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 24,
+    flex: 1,
   },
   emptyContainer: {
     flex: 1,
@@ -397,15 +397,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categoryScroll: {
-    maxHeight: 60,
+    maxHeight: 80, // allow more vertical space so chips aren't clipped
   },
   categoryContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 8,
+    paddingVertical: 12,
+    gap: 10,
   },
   categoryTab: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -420,10 +420,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.5)",
   },
   categoryText: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#fff",
     fontWeight: "500",
     opacity: 0.9,
+    paddingHorizontal: 4,
   },
   activeCategoryText: {
     color: "#fff",
@@ -461,14 +462,14 @@ const styles = StyleSheet.create({
   },
   recipeCardName: {
     position: "absolute",
-    bottom: 4,
-    left: 4,
-    right: 4,
-    fontSize: 10,
+    bottom: 6,
+    left: 6,
+    right: 6,
+    fontSize: 11,
     color: "#fff",
     backgroundColor: "rgba(26, 77, 46, 0.8)",
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 4,
     textAlign: "center",
     fontWeight: "600",
