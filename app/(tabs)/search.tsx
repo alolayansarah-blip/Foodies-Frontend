@@ -25,7 +25,11 @@ interface Recipe {
   id: string;
   name?: string;
   title?: string;
-  category?: string | string[] | Array<{ _id?: string; categoryName?: string; name?: string }> | { _id?: string; categoryName?: string; name?: string };
+  category?:
+    | string
+    | string[]
+    | Array<{ _id?: string; categoryName?: string; name?: string }>
+    | { _id?: string; categoryName?: string; name?: string };
   category_id?: string;
   image?: string | null;
   rating?: number;
@@ -218,7 +222,9 @@ export default function SearchScreen() {
                                     .map((cat) =>
                                       typeof cat === "string"
                                         ? cat
-                                        : (cat as any)?.categoryName || (cat as any)?.name || ""
+                                        : (cat as any)?.categoryName ||
+                                          (cat as any)?.name ||
+                                          ""
                                     )
                                     .filter(Boolean)
                                     .join(", ") || "Uncategorized"
