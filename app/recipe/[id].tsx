@@ -1,14 +1,18 @@
 import { ThemedText } from "@/components/themed-text";
+import { config } from "@/constants/config";
+import { getCategoryById } from "@/services/categories";
+import { getIngredientsByRecipe } from "@/services/recipeIngredients";
 import { getRecipeById } from "@/services/recipes";
+import { styles } from "@/styles/recipeDetail";
 import RecipeType from "@/types/RecipeType";
-import { Ionicons } from "@expo/vector-icons";
+import { getImageUrl } from "@/utils/imageUtils";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -17,150 +21,200 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
-const API_BASE_URL = "http://134.122.96.197:3000";
-
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [recipe, setRecipe] = useState<RecipeType | null>(null);
+  const [recipeIngredients, setRecipeIngredients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) {
-      fetchRecipe();
+    // Handle both string and array formats from useLocalSearchParams
+    const recipeId = Array.isArray(id) ? id[0] : id;
+    if (recipeId) {
+      fetchRecipe(recipeId);
+    } else {
+      setError("Recipe ID is missing");
+      setIsLoading(false);
     }
   }, [id]);
 
-  const fetchRecipe = async () => {
+  const fetchRecipe = async (recipeId: string) => {
     try {
       setIsLoading(true);
       setError(null);
-
-      // Helper function to construct image URL
-      const getImageUrl = (imagePath: any): string | null => {
-        if (!imagePath) return null;
-        if (typeof imagePath === "string") {
-          // If it's already a full URL, return it
-          if (
-            imagePath.startsWith("http://") ||
-            imagePath.startsWith("https://")
-          ) {
-            return imagePath;
-          }
-          // If it's a relative path, construct full URL
-          if (imagePath.startsWith("/")) {
-            return `${API_BASE_URL}${imagePath}`;
-          }
-          return `${API_BASE_URL}/${imagePath}`;
-        }
-        return null;
-      };
+      
+      if (!recipeId) {
+        throw new Error("Recipe ID is required");
+      }
 
       // Helper function to extract user data
       const extractUserData = (recipeData: any) => {
-        // Try nested user object first
+        console.log("Extracting user data from:", JSON.stringify(recipeData, null, 2));
+        
+        // Try nested user object first (MongoDB populated field)
         if (recipeData.user) {
-          return {
-            _id:
-              recipeData.user._id ||
-              recipeData.user.id ||
-              recipeData.user_id ||
-              recipeData.userId ||
-              "",
-            userName:
-              recipeData.user.userName ||
-              recipeData.user.name ||
-              recipeData.user.username ||
-              recipeData.userName ||
-              "",
-            userProfilePicture:
-              recipeData.user.userProfilePicture ||
-              recipeData.user.profileImage ||
-              recipeData.user.avatar ||
-              null,
-          };
+          const user = recipeData.user;
+          // Handle both object and string (ObjectId) cases
+          if (typeof user === 'object' && user !== null) {
+            const userData = {
+              _id:
+                user._id?.toString() ||
+                user.id?.toString() ||
+                recipeData.user_id?.toString() ||
+                recipeData.userId?.toString() ||
+                "",
+              userName:
+                user.userName ||
+                user.name ||
+                user.username ||
+                user.user_name ||
+                recipeData.userName ||
+                "",
+              userProfilePicture:
+                user.userProfilePicture ||
+                user.profileImage ||
+                user.avatar ||
+                user.profile_picture ||
+                null,
+            };
+            console.log("Extracted user data from nested user object:", userData);
+            return userData;
+          }
         }
+        
         // Try top-level user fields
         if (recipeData.user_id || recipeData.userId) {
-          return {
-            _id: recipeData.user_id || recipeData.userId || "",
-            userName: recipeData.userName || recipeData.username || "",
-            userProfilePicture: null,
+          const userData = {
+            _id: (recipeData.user_id || recipeData.userId)?.toString() || "",
+            userName: recipeData.userName || recipeData.username || recipeData.user_name || "",
+            userProfilePicture: recipeData.userProfilePicture || recipeData.profileImage || null,
           };
+          console.log("Extracted user data from top-level fields:", userData);
+          return userData;
         }
+        
+        // Try to find user data in any nested structure
+        if (recipeData.createdBy) {
+          const createdBy = recipeData.createdBy;
+          if (typeof createdBy === 'object' && createdBy !== null) {
+            return {
+              _id: createdBy._id?.toString() || createdBy.id?.toString() || "",
+              userName: createdBy.userName || createdBy.name || createdBy.username || "",
+              userProfilePicture: createdBy.userProfilePicture || createdBy.profileImage || null,
+            };
+          }
+        }
+        
+        console.log("No user data found in recipe data");
         return null;
       };
 
       // Try using the service first
       try {
-        const recipeData = await getRecipeById(id);
+        const recipeData = await getRecipeById(recipeId);
         console.log(
           "Recipe detail API response:",
           JSON.stringify(recipeData, null, 2)
         );
 
-        const userData = extractUserData(recipeData);
+        // Ensure we have the actual recipe object (handle MongoDB _id)
+        const actualRecipe = recipeData || {};
+        
+        const userData = extractUserData(actualRecipe);
+        console.log("Extracted userData:", userData);
+        
         const imageUrl = getImageUrl(
-          recipeData.image ||
-            (recipeData as any).imageUrl ||
-            (recipeData as any).imagePath ||
-            (recipeData as any).photo ||
-            (recipeData as any).photoUrl
+          actualRecipe.image ||
+            (actualRecipe as any).imageUrl ||
+            (actualRecipe as any).imagePath ||
+            (actualRecipe as any).photo ||
+            (actualRecipe as any).photoUrl
         );
 
         // Map the response to RecipeType format
+        // MongoDB uses _id, so prioritize _id over id
+        const mappedRecipeIdMain: string = (actualRecipe as any)._id || actualRecipe.id || recipeId;
+        
+        // Ensure user data is properly set
+        const finalUserData = userData || {
+          _id: (actualRecipe as any).user_id?.toString() || (actualRecipe as any).userId?.toString() || "",
+          userName: (actualRecipe as any).userName || (actualRecipe as any).username || "",
+          userProfilePicture: null,
+        };
+        
+        console.log("Final user data being set:", finalUserData);
+        
+        // Extract title and description (which is steps/directions)
+        const recipeTitle = actualRecipe.title || actualRecipe.name || actualRecipe.recipeName || "Untitled Recipe";
+        const recipeDescription = actualRecipe.description || "";
+        
+        // Handle category based on schema structure
+        // Schema has category_id (ObjectId ref), category may be populated
+        let categoryData: Array<{ _id: string; categoryName: string }> = [];
+        const categoryId = actualRecipe.category_id || actualRecipe.categoryId || "";
+        
+        // If category is populated (object), use it
+        if (actualRecipe.category && typeof actualRecipe.category === "object" && !Array.isArray(actualRecipe.category)) {
+          categoryData = [{
+            _id: actualRecipe.category._id || actualRecipe.category.id || categoryId,
+            categoryName: actualRecipe.category.categoryName || actualRecipe.category.name || "",
+          }];
+        }
+        // If category_id exists but category is not populated, fetch it
+        else if (categoryId) {
+          try {
+            const category = await getCategoryById(categoryId);
+            categoryData = [{
+              _id: categoryId,
+              categoryName: category.categoryName || category.name || "",
+            }];
+          } catch (error) {
+            console.error(`Error fetching category ${categoryId}:`, error);
+            // If fetch fails, just store the ID
+            categoryData = [{
+              _id: categoryId,
+              categoryName: "",
+            }];
+          }
+        }
+        
         const mappedRecipe: RecipeType = {
-          id: recipeData.id || (recipeData as any)._id || id,
-          title:
-            recipeData.title ||
-            (recipeData as any).name ||
-            (recipeData as any).recipeName ||
-            "",
+          id: mappedRecipeIdMain,
+          title: recipeTitle,
           date:
-            recipeData.date || recipeData.createdAt || new Date().toISOString(),
+            actualRecipe.date || actualRecipe.createdAt || new Date().toISOString(),
           createdAt:
-            recipeData.createdAt || recipeData.date || new Date().toISOString(),
+            actualRecipe.createdAt || actualRecipe.date || new Date().toISOString(),
           updatedAt:
-            recipeData.updatedAt ||
-            recipeData.createdAt ||
+            actualRecipe.updatedAt ||
+            actualRecipe.createdAt ||
             new Date().toISOString(),
-          comments: (recipeData as any).comments || 0,
+          comments: (actualRecipe as any).comments || 0,
           image: imageUrl,
-          servings:
-            recipeData.servings ||
-            (recipeData as any).servingSize ||
-            (recipeData as any).serves ||
-            0,
-          cookTime:
-            recipeData.cookTime ||
-            (recipeData as any).cookingTime ||
-            (recipeData as any).prepTime ||
-            (recipeData as any).time ||
-            0,
-          description:
-            recipeData.description ||
-            (recipeData as any).instructions ||
-            (recipeData as any).directions ||
-            "",
-          user: userData || {
-            _id: "",
-            userName: "",
-            userProfilePicture: null,
-          },
-          category: Array.isArray((recipeData as any).category)
-            ? (recipeData as any).category.map((cat: any) => ({
-                _id: cat._id || cat.id || "",
-                categoryName: cat.categoryName || cat.name || cat || "",
-              }))
-            : [],
+          servings: 0,
+          cookTime: 0,
+          description: recipeDescription,
+          user: finalUserData,
+          category: categoryData,
         };
         setRecipe(mappedRecipe);
+        
+        // Fetch recipe ingredients
+        const recipeIdForIngredients: string = mappedRecipeIdMain;
+        try {
+          const ingredients = await getIngredientsByRecipe(recipeIdForIngredients);
+          setRecipeIngredients(Array.isArray(ingredients) ? ingredients : []);
+        } catch (ingredientError) {
+          console.error("Error fetching recipe ingredients:", ingredientError);
+          setRecipeIngredients([]);
+        }
       } catch (serviceError) {
         console.log("Service error, trying direct API call:", serviceError);
         // Fallback to direct API call
-        const response = await fetch(`${API_BASE_URL}/api/recipes/${id}`, {
+        const response = await fetch(`${config.API_BASE_URL}/api/recipes/${recipeId}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -170,67 +224,104 @@ export default function RecipeDetailScreen() {
         if (response.ok) {
           const data = await response.json();
           console.log("Direct API response:", JSON.stringify(data, null, 2));
+          
+          // Handle different response structures
           const recipeData = data.data || data;
+          
+          // Ensure we have the actual recipe object
+          const actualRecipe = recipeData || {};
 
-          const userData = extractUserData(recipeData);
+          const userData = extractUserData(actualRecipe);
+          console.log("Extracted userData (fallback):", userData);
+          
           const imageUrl = getImageUrl(
-            recipeData.image ||
-              recipeData.imageUrl ||
-              recipeData.imagePath ||
-              recipeData.photo ||
-              recipeData.photoUrl
+            actualRecipe.image ||
+              (actualRecipe as any).imageUrl ||
+              (actualRecipe as any).imagePath ||
+              (actualRecipe as any).photo ||
+              (actualRecipe as any).photoUrl
           );
 
+          // MongoDB uses _id, so prioritize _id over id
+          const mappedRecipeIdFallback: string = (actualRecipe as any)._id || actualRecipe.id || recipeId;
+
+          // Ensure user data is properly set
+          const finalUserData = userData || {
+            _id: (actualRecipe as any).user_id?.toString() || (actualRecipe as any).userId?.toString() || "",
+            userName: (actualRecipe as any).userName || (actualRecipe as any).username || "",
+            userProfilePicture: null,
+          };
+          
+          console.log("Final user data being set (fallback):", finalUserData);
+
+          // Extract title and description (which is steps/directions)
+          const recipeTitle = actualRecipe.title || actualRecipe.name || actualRecipe.recipeName || "Untitled Recipe";
+          const recipeDescription = actualRecipe.description || "";
+
+          // Handle category based on schema structure
+          // Schema has category_id (ObjectId ref), category may be populated
+          let categoryData: Array<{ _id: string; categoryName: string }> = [];
+          const categoryId = actualRecipe.category_id || actualRecipe.categoryId || "";
+          
+          // If category is populated (object), use it
+          if (actualRecipe.category && typeof actualRecipe.category === "object" && !Array.isArray(actualRecipe.category)) {
+            categoryData = [{
+              _id: actualRecipe.category._id || actualRecipe.category.id || categoryId,
+              categoryName: actualRecipe.category.categoryName || actualRecipe.category.name || "",
+            }];
+          }
+          // If category_id exists but category is not populated, fetch it
+          else if (categoryId) {
+            try {
+              const category = await getCategoryById(categoryId);
+              categoryData = [{
+                _id: categoryId,
+                categoryName: category.categoryName || category.name || "",
+              }];
+            } catch (error) {
+              console.error(`Error fetching category ${categoryId}:`, error);
+              // If fetch fails, just store the ID
+              categoryData = [{
+                _id: categoryId,
+                categoryName: "",
+              }];
+            }
+          }
+
           const mappedRecipe: RecipeType = {
-            id: recipeData.id || recipeData._id || id,
-            title:
-              recipeData.title ||
-              recipeData.name ||
-              recipeData.recipeName ||
-              "",
+            id: mappedRecipeIdFallback,
+            title: recipeTitle,
             date:
-              recipeData.date ||
-              recipeData.createdAt ||
+              actualRecipe.date ||
+              actualRecipe.createdAt ||
               new Date().toISOString(),
             createdAt:
-              recipeData.createdAt ||
-              recipeData.date ||
+              actualRecipe.createdAt ||
+              actualRecipe.date ||
               new Date().toISOString(),
             updatedAt:
-              recipeData.updatedAt ||
-              recipeData.createdAt ||
+              actualRecipe.updatedAt ||
+              actualRecipe.createdAt ||
               new Date().toISOString(),
-            comments: recipeData.comments || 0,
+            comments: (actualRecipe as any).comments || 0,
             image: imageUrl,
-            servings:
-              recipeData.servings ||
-              recipeData.servingSize ||
-              recipeData.serves ||
-              0,
-            cookTime:
-              recipeData.cookTime ||
-              recipeData.cookingTime ||
-              recipeData.prepTime ||
-              recipeData.time ||
-              0,
-            description:
-              recipeData.description ||
-              recipeData.instructions ||
-              recipeData.directions ||
-              "",
-            user: userData || {
-              _id: "",
-              userName: "",
-              userProfilePicture: null,
-            },
-            category: Array.isArray(recipeData.category)
-              ? recipeData.category.map((cat: any) => ({
-                  _id: cat._id || cat.id || "",
-                  categoryName: cat.categoryName || cat.name || cat || "",
-                }))
-              : [],
+            servings: 0,
+            cookTime: 0,
+            description: recipeDescription,
+            user: finalUserData,
+            category: categoryData,
           };
           setRecipe(mappedRecipe);
+          
+          // Fetch recipe ingredients
+          const recipeIdForIngredientsFallback: string = mappedRecipeIdFallback;
+          try {
+            const ingredients = await getIngredientsByRecipe(recipeIdForIngredientsFallback);
+            setRecipeIngredients(Array.isArray(ingredients) ? ingredients : []);
+          } catch (ingredientError) {
+            console.error("Error fetching recipe ingredients:", ingredientError);
+            setRecipeIngredients([]);
+          }
         } else {
           throw new Error("Failed to fetch recipe");
         }
@@ -325,75 +416,77 @@ export default function RecipeDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Recipe Image */}
-          <View style={styles.imageContainer}>
+          {/* Recipe Info */}
+          <View style={styles.infoContainer}>
+            {/* Recipe Image */}
             {recipe.image ? (
               <Image
                 source={{ uri: recipe.image }}
-                style={styles.image}
-                resizeMode="cover"
+                style={styles.recipeImage}
+                contentFit="cover"
               />
             ) : (
-              <View style={styles.imagePlaceholder}>
-                <Ionicons
-                  name="restaurant"
-                  size={60}
-                  color="rgba(255, 255, 255, 0.5)"
-                />
+              <View style={styles.recipeImagePlaceholder}>
+                <MaterialCommunityIcons name="food" size={60} color="rgba(255, 255, 255, 0.5)" />
               </View>
             )}
-          </View>
 
-          {/* Recipe Info */}
-          <View style={styles.infoContainer}>
-            <ThemedText style={styles.title}>
-              {recipe.title || "Untitled Recipe"}
-            </ThemedText>
-
-            <View style={styles.metaRow}>
-              <ThemedText style={styles.metaText}>
-                Created By:{" "}
-                {recipe.user?.userName ||
-                  (recipe.user as any)?.name ||
-                  (recipe as any)?.userName ||
-                  "Unknown Chef"}
+            {/* Recipe Title */}
+            <View style={styles.titleSection}>
+              <ThemedText style={styles.recipeTitle}>
+                {recipe.title || "Untitled Recipe"}
               </ThemedText>
-              <ThemedText style={styles.metaText}>
-                {formatTime(recipe.createdAt)}
-              </ThemedText>
-            </View>
-
-            <View style={styles.detailsRow}>
-              <View style={styles.detailBadge}>
-                <ThemedText style={styles.detailText}>
-                  ⏱️ {recipe.cookTime} min
-                </ThemedText>
-              </View>
-              <View style={styles.detailBadge}>
-                <ThemedText style={styles.detailText}>
-                  🍽️ {recipe.servings} servings
-                </ThemedText>
-              </View>
             </View>
 
             {/* Categories */}
             {recipe.category && recipe.category.length > 0 && (
-              <View style={styles.categoriesContainer}>
-                {recipe.category.map((cat, index) => (
-                  <View key={index} style={styles.categoryTag}>
-                    <ThemedText style={styles.categoryText}>
-                      {cat.categoryName}
-                    </ThemedText>
-                  </View>
-                ))}
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>Categories</ThemedText>
+                <View style={styles.categoriesContainer}>
+                  {recipe.category.map((cat, index) => (
+                    <View key={index} style={styles.categoryTag}>
+                      <ThemedText style={styles.categoryText}>
+                        {cat.categoryName}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
               </View>
             )}
 
-            {/* Description */}
-            <View style={styles.descriptionWrapper}>
-              <ThemedText style={styles.description}>
-                {recipe.description || "No description available."}
-              </ThemedText>
+            {/* Ingredients */}
+            {recipeIngredients.length > 0 && (
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>Ingredients</ThemedText>
+                <View style={styles.ingredientsContainer}>
+                  {recipeIngredients.map((recipeIngredient, index) => {
+                    const ingredient = recipeIngredient.ingredient || recipeIngredient;
+                    const ingredientName = 
+                      ingredient?.name || 
+                      ingredient?.ingredientName || 
+                      recipeIngredient?.name ||
+                      "Unknown Ingredient";
+                    return (
+                      <View key={index} style={styles.ingredientItem}>
+                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                        <ThemedText style={styles.ingredientText}>
+                          {ingredientName}
+                        </ThemedText>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {/* Steps / Directions */}
+            <View style={styles.section}>
+              <ThemedText style={styles.sectionTitle}>Steps / Directions</ThemedText>
+              <View style={styles.stepsWrapper}>
+                <ThemedText style={styles.stepsText}>
+                  {recipe.description || "No steps available."}
+                </ThemedText>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -402,170 +495,3 @@ export default function RecipeDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a4d2e",
-  },
-  backgroundElements: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    top: 0,
-    left: 0,
-    zIndex: 0,
-  },
-  circle1: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-    top: -50,
-    right: -50,
-  },
-  circle2: {
-    position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: "rgba(255, 255, 255, 0.02)",
-    bottom: 100,
-    left: -30,
-  },
-  circle3: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255, 255, 255, 0.025)",
-    top: "40%",
-    right: 20,
-  },
-  scrollView: {
-    flex: 1,
-    zIndex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  imageContainer: {
-    width: "90%",
-    maxWidth: 350,
-    height: 200,
-    alignSelf: "center",
-    borderRadius: 15,
-    overflow: "hidden",
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  imagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  infoContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 12,
-    lineHeight: 36,
-  },
-  metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-    flexWrap: "wrap",
-  },
-  metaText: {
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 14,
-  },
-  detailsRow: {
-    flexDirection: "row",
-    gap: 15,
-    marginBottom: 16,
-  },
-  detailBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    padding: 8,
-    borderRadius: 8,
-  },
-  detailText: {
-    color: "#fff",
-    fontSize: 12,
-  },
-  categoriesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 20,
-  },
-  categoryTag: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    padding: 12,
-    borderRadius: 10,
-  },
-  categoryText: {
-    color: "#fff",
-    fontSize: 14,
-  },
-  descriptionWrapper: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 4,
-    padding: 16,
-    marginTop: 8,
-  },
-  description: {
-    color: "rgba(255, 255, 255, 0.9)",
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    color: "#fff",
-    marginTop: 12,
-    fontSize: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  errorText: {
-    color: "#fff",
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: "center",
-  },
-});

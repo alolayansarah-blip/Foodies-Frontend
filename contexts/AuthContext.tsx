@@ -30,19 +30,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Token check on app start:', token ? 'Token exists' : 'No token found');
       
       if (token) {
-        // Token exists, try to get current user
+        // Token exists, try to get current user with timeout
         try {
           console.log('Attempting to get current user with stored token...');
-          const currentUser = await getCurrentUser();
+          
+          // Add timeout to prevent infinite loading
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
+          });
+          
+          const currentUser = await Promise.race([
+            getCurrentUser(),
+            timeoutPromise
+          ]) as User;
+          
           console.log('Current user retrieved:', currentUser);
           setUser(currentUser);
           console.log('User state set, isAuthenticated should now be:', !!currentUser);
         } catch (error: any) {
           // Token might be invalid, but don't clear it immediately
           console.error('Failed to get current user:', error?.message || error);
-          // Only clear token if it's a 401 (unauthorized)
-          if (error?.response?.status === 401 || error?.statusCode === 401) {
-            console.log('Token is invalid (401), clearing...');
+          // Only clear token if it's a 401 (unauthorized) or timeout
+          if (error?.response?.status === 401 || error?.statusCode === 401 || error?.message === 'Request timeout') {
+            console.log('Token is invalid or request timed out, clearing...');
             setUser(null);
           } else {
             // For other errors, keep the token but set user to null
@@ -58,6 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error checking auth:', error);
       setUser(null);
     } finally {
+      // Always set loading to false, even if there was an error
+      console.log('Setting isLoading to false');
       setIsLoading(false);
     }
   };

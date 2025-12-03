@@ -2,8 +2,10 @@ import { PageSkeleton } from "@/components/skeleton";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
-import { Category, createCategory, getCategories } from "@/services/categories";
+import { Category, createCategory, getCategories, getCategoryById } from "@/services/categories";
 import { getRecipes, Recipe } from "@/services/recipes";
+import { styles } from "@/styles/home";
+import { getImageUrl } from "@/utils/imageUtils";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useFocusEffect, useNavigation, useRouter } from "expo-router";
@@ -15,7 +17,6 @@ import {
   Modal,
   Platform,
   ScrollView,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
   View,
@@ -122,10 +123,11 @@ export default function HomeScreen() {
       // If a specific category is selected (not "all"), filter by category_id
       if (selectedCategory !== "all") {
         const selectedCat = categories.find(
-          (cat) => cat.id === selectedCategory
+          (cat) => cat.id === selectedCategory || (cat as any)._id === selectedCategory
         );
-        if (selectedCat?.id && selectedCat.id !== "all") {
-          params.category_id = selectedCat.id;
+        if (selectedCat && selectedCat.id !== "all") {
+          // Prioritize _id for backend (ObjectId format)
+          params.category_id = (selectedCat as any)._id || selectedCat.id;
         }
       }
 
@@ -138,65 +140,42 @@ export default function HomeScreen() {
         return;
       }
 
-      // Map API recipes to match our format with proper user data extraction
-      const mappedRecipes = apiRecipes.map((recipe: any) => {
-        // Extract user data from various possible locations
-        let userData;
-        if (recipe.user && typeof recipe.user === "object") {
-          // User object exists
-          userData = {
-            _id:
-              recipe.user._id ||
-              recipe.user.id ||
-              recipe.user_id ||
-              recipe.userId ||
-              "",
-            userName:
-              recipe.user.userName ||
-              recipe.user.name ||
-              recipe.user.username ||
-              "",
-            userProfilePicture:
-              recipe.user.userProfilePicture ||
-              recipe.user.profileImage ||
-              recipe.user.avatar ||
-              null,
-          };
-        } else {
-          // Try to extract from top-level fields
-          userData = {
-            _id: recipe.user_id || recipe.userId || "",
-            userName: recipe.userName || recipe.username || "",
-            userProfilePicture:
-              recipe.userProfilePicture || recipe.profileImage || null,
+      // Map API recipes to match our format (new recipe format: title, image, categories, ingredients, steps)
+      // Based on schema: category_id is ObjectId reference, category may be populated
+      const mappedRecipesPromises = apiRecipes.map(async (recipe: any) => {
+        // Handle category based on schema structure
+        // Schema has category_id (ObjectId ref), category may be populated
+        let categoryData = null;
+        const categoryId = recipe.category_id || recipe.categoryId || "";
+        
+        // If category is populated (object), use it
+        if (recipe.category && typeof recipe.category === "object" && !Array.isArray(recipe.category)) {
+          categoryData = {
+            _id: recipe.category._id || recipe.category.id || categoryId,
+            categoryName: recipe.category.categoryName || recipe.category.name || "",
           };
         }
-
-        // Helper function to construct image URL
-        const getImageUrl = (imagePath: any): string | null => {
-          if (!imagePath) return null;
-          if (typeof imagePath === "string") {
-            // If it's already a full URL, return it
-            if (
-              imagePath.startsWith("http://") ||
-              imagePath.startsWith("https://")
-            ) {
-              return imagePath;
-            }
-            // If it's a relative path, construct full URL
-            const API_BASE_URL = "http://134.122.96.197:3000";
-            if (imagePath.startsWith("/")) {
-              return `${API_BASE_URL}${imagePath}`;
-            }
-            return `${API_BASE_URL}/${imagePath}`;
+        // If category_id exists but category is not populated, fetch it
+        else if (categoryId) {
+          try {
+            const category = await getCategoryById(categoryId);
+            categoryData = {
+              _id: categoryId,
+              categoryName: category.categoryName || category.name || "",
+            };
+          } catch (error) {
+            console.error(`Error fetching category ${categoryId}:`, error);
+            // If fetch fails, just store the ID
+            categoryData = {
+              _id: categoryId,
+              categoryName: "",
+            };
           }
-          return null;
-        };
+        }
 
         return {
           ...recipe,
           id: recipe.id || recipe._id || String(Date.now() + Math.random()),
-          name: recipe.title || recipe.name || recipe.recipeName || "",
           title: recipe.title || recipe.name || recipe.recipeName || "",
           image: getImageUrl(
             recipe.image ||
@@ -205,50 +184,21 @@ export default function HomeScreen() {
               recipe.photo ||
               recipe.photoUrl
           ),
-          category: (() => {
-            // Extract category name as string
-            if (Array.isArray(recipe.category) && recipe.category.length > 0) {
-              return (
-                recipe.category[0]?.categoryName ||
-                recipe.category[0]?.name ||
-                ""
-              );
-            }
-            if (recipe.category && typeof recipe.category === "object") {
-              return recipe.category.categoryName || recipe.category.name || "";
-            }
-            if (typeof recipe.category === "string") {
-              return recipe.category;
-            }
-            return "";
-          })(),
-          category_id:
-            recipe.category_id ||
-            (Array.isArray(recipe.category)
-              ? recipe.category[0]?._id
-              : recipe.category?._id) ||
-            "",
-          dateAdded:
-            recipe.date || recipe.createdAt || new Date().toISOString(),
+          // Category structure based on schema
+          category: categoryData ? [categoryData] : [],
+          category_id: categoryId,
+          // Keep description (which is steps/directions)
+          description: recipe.description || "",
+          // Keep ingredients array if available
+          ingredients: recipe.ingredients || [],
           createdAt:
             recipe.createdAt || recipe.date || new Date().toISOString(),
           updatedAt:
             recipe.updatedAt || recipe.createdAt || new Date().toISOString(),
-          cookTime:
-            recipe.cookTime ||
-            recipe.cookingTime ||
-            recipe.prepTime ||
-            recipe.time ||
-            0,
-          servings: recipe.servings || recipe.servingSize || recipe.serves || 0,
-          description:
-            recipe.description ||
-            recipe.instructions ||
-            recipe.directions ||
-            "",
-          user: userData,
         };
       });
+      
+      const mappedRecipes = await Promise.all(mappedRecipesPromises);
       setRecipes(mappedRecipes);
     } catch (error: any) {
       console.error("Error fetching recipes:", error);
@@ -441,57 +391,84 @@ export default function HomeScreen() {
                   }
                 }}
               >
-                <View style={styles.recipeImageContainer}>
-                  {recipe.image ? (
-                    <Image
-                      source={{ uri: recipe.image }}
-                      style={styles.recipeImage}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <View style={styles.recipeImagePlaceholder}>
-                      <MaterialCommunityIcons
-                        name="food"
-                        size={40}
-                        color="#fff"
-                      />
-                    </View>
-                  )}
-                </View>
-                <View style={styles.recipeContent}>
-                  <ThemedText style={styles.recipeName} numberOfLines={1}>
-                    {recipe.name || recipe.title || "Untitled Recipe"}
-                  </ThemedText>
-                  <ThemedText
-                    style={styles.recipeDescription}
-                    numberOfLines={2}
-                  >
-                    {recipe.description || ""}
-                  </ThemedText>
-                  <ThemedText style={styles.recipeCreator} numberOfLines={1}>
-                    Created By:{" "}
-                    {(recipe as any).user?.userName ||
-                      (recipe as any).user?.name ||
-                      (recipe as any).userName}
-                  </ThemedText>
-                  <View style={styles.recipeMeta}>
-                    <View style={styles.recipeMetaItem}>
-                      <Ionicons name="time-outline" size={14} color="#fff" />
-                      <ThemedText style={styles.recipeMetaText}>
-                        {recipe.cookTime || 0} min
-                      </ThemedText>
-                    </View>
-                    <View style={styles.recipeMetaItem}>
-                      <MaterialCommunityIcons
-                        name="chef-hat"
-                        size={14}
-                        color="#fff"
-                      />
-                      <ThemedText style={styles.recipeMetaText}>
-                        {recipe.servings || 0} servings
-                      </ThemedText>
-                    </View>
+                {/* Recipe Image */}
+                {recipe.image ? (
+                  <Image
+                    source={{ uri: recipe.image }}
+                    style={styles.recipeImage}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={styles.recipeImagePlaceholder}>
+                    <MaterialCommunityIcons name="food" size={40} color="rgba(255, 255, 255, 0.5)" />
                   </View>
+                )}
+                
+                {/* Recipe Content */}
+                <View style={styles.recipeContent}>
+                  {/* Recipe Title */}
+                  <ThemedText style={styles.recipeName} numberOfLines={2}>
+                    {recipe.title || recipe.name || "Untitled Recipe"}
+                  </ThemedText>
+                  
+                  {/* Description Summary */}
+                  {recipe.description && (
+                    <ThemedText style={styles.recipeDescription} numberOfLines={3}>
+                      {recipe.description.length > 120
+                        ? `${recipe.description.substring(0, 120)}...`
+                        : recipe.description}
+                    </ThemedText>
+                  )}
+                  
+                  {/* Categories */}
+                  {(() => {
+                    let hasCategories = false;
+                    let categoryElements = null;
+
+                    if (Array.isArray(recipe.category) && recipe.category.length > 0) {
+                      hasCategories = true;
+                      categoryElements = recipe.category.map((cat: any, index: number) => {
+                        const categoryName = typeof cat === 'string' 
+                          ? cat 
+                          : (cat?.categoryName || cat?.name || "");
+                        if (!categoryName) return null;
+                        return (
+                          <View key={index} style={styles.recipeCategoryTag}>
+                            <ThemedText style={styles.recipeCategoryText}>
+                              {categoryName}
+                            </ThemedText>
+                          </View>
+                        );
+                      }).filter(Boolean);
+                    } else if (recipe.category && typeof recipe.category === "object") {
+                      const categoryName = recipe.category.categoryName || recipe.category.name || "";
+                      if (categoryName) {
+                        hasCategories = true;
+                        categoryElements = (
+                          <View style={styles.recipeCategoryTag}>
+                            <ThemedText style={styles.recipeCategoryText}>
+                              {categoryName}
+                            </ThemedText>
+                          </View>
+                        );
+                      }
+                    } else if (typeof recipe.category === "string" && recipe.category) {
+                      hasCategories = true;
+                      categoryElements = (
+                        <View style={styles.recipeCategoryTag}>
+                          <ThemedText style={styles.recipeCategoryText}>
+                            {recipe.category}
+                          </ThemedText>
+                        </View>
+                      );
+                    }
+
+                    return hasCategories ? (
+                      <View style={styles.recipeCategories}>
+                        {categoryElements}
+                      </View>
+                    ) : null;
+                  })()}
                 </View>
               </TouchableOpacity>
             ))
@@ -631,79 +608,84 @@ export default function HomeScreen() {
                     }
                   }}
                 >
-                  <View style={styles.allRecipesImageContainer}>
-                    {recipe.image ? (
-                      <Image
-                        source={{ uri: recipe.image }}
-                        style={styles.allRecipesImage}
-                        contentFit="cover"
-                      />
-                    ) : (
-                      <View style={styles.allRecipesImagePlaceholder}>
-                        <MaterialCommunityIcons
-                          name="food"
-                          size={40}
-                          color="#fff"
-                        />
-                      </View>
-                    )}
-                  </View>
+                  {/* Recipe Image */}
+                  {recipe.image ? (
+                    <Image
+                      source={{ uri: recipe.image }}
+                      style={styles.allRecipesImage}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={styles.allRecipesImagePlaceholder}>
+                      <MaterialCommunityIcons name="food" size={40} color="rgba(255, 255, 255, 0.5)" />
+                    </View>
+                  )}
+                  
+                  {/* Recipe Content */}
                   <View style={styles.allRecipesContent}>
-                    <ThemedText style={styles.allRecipesName} numberOfLines={1}>
-                      {recipe.name}
+                    {/* Recipe Title */}
+                    <ThemedText style={styles.allRecipesName} numberOfLines={2}>
+                      {recipe.title || recipe.name || "Untitled Recipe"}
                     </ThemedText>
-                    <ThemedText
-                      style={styles.allRecipesDescription}
-                      numberOfLines={2}
-                    >
-                      {recipe.description}
-                    </ThemedText>
-                    <View style={styles.allRecipesMeta}>
-                      <View style={styles.allRecipesMetaItem}>
-                        <Ionicons name="time-outline" size={14} color="#fff" />
-                        <ThemedText style={styles.allRecipesMetaText}>
-                          {recipe.time}
-                        </ThemedText>
-                      </View>
-                      <View style={styles.allRecipesMetaItem}>
-                        <MaterialCommunityIcons
-                          name="chef-hat"
-                          size={14}
-                          color="#fff"
-                        />
-                        <ThemedText style={styles.allRecipesMetaText}>
-                          {recipe.difficulty}
-                        </ThemedText>
-                      </View>
-                      <View style={styles.allRecipesMetaItem}>
-                        <Ionicons name="flame-outline" size={14} color="#fff" />
-                        <ThemedText style={styles.allRecipesMetaText}>
-                          {recipe.calories} kcal
-                        </ThemedText>
-                      </View>
-                    </View>
-                    <View style={styles.allRecipesFooter}>
-                      <View style={styles.allRecipesRating}>
-                        <Ionicons name="star" size={16} color="#ffa500" />
-                        <ThemedText style={styles.allRecipesRatingText}>
-                          {recipe.rating}
-                        </ThemedText>
-                      </View>
-                      <View style={styles.allRecipesCategory}>
-                        <MaterialCommunityIcons
-                          name={
-                            categories.find(
-                              (cat) => cat.name === recipe.category
-                            )?.icon as any
-                          }
-                          size={14}
-                          color="#fff"
-                        />
-                        <ThemedText style={styles.allRecipesCategoryText}>
-                          {recipe.category}
-                        </ThemedText>
-                      </View>
-                    </View>
+                    
+                    {/* Description Summary */}
+                    {recipe.description && (
+                      <ThemedText style={styles.allRecipesDescription} numberOfLines={2}>
+                        {recipe.description.length > 100
+                          ? `${recipe.description.substring(0, 100)}...`
+                          : recipe.description}
+                      </ThemedText>
+                    )}
+                    
+                    {/* Categories */}
+                    {(() => {
+                      let hasCategories = false;
+                      let categoryElements = null;
+
+                      if (Array.isArray(recipe.category) && recipe.category.length > 0) {
+                        hasCategories = true;
+                        categoryElements = recipe.category.map((cat: any, index: number) => {
+                          const categoryName = typeof cat === 'string' 
+                            ? cat 
+                            : (cat?.categoryName || cat?.name || "");
+                          if (!categoryName) return null;
+                          return (
+                            <View key={index} style={styles.recipeCategoryTag}>
+                              <ThemedText style={styles.recipeCategoryText}>
+                                {categoryName}
+                              </ThemedText>
+                            </View>
+                          );
+                        }).filter(Boolean);
+                      } else if (recipe.category && typeof recipe.category === "object") {
+                        const categoryName = recipe.category.categoryName || recipe.category.name || "";
+                        if (categoryName) {
+                          hasCategories = true;
+                          categoryElements = (
+                            <View style={styles.recipeCategoryTag}>
+                              <ThemedText style={styles.recipeCategoryText}>
+                                {categoryName}
+                              </ThemedText>
+                            </View>
+                          );
+                        }
+                      } else if (typeof recipe.category === "string" && recipe.category) {
+                        hasCategories = true;
+                        categoryElements = (
+                          <View style={styles.recipeCategoryTag}>
+                            <ThemedText style={styles.recipeCategoryText}>
+                              {recipe.category}
+                            </ThemedText>
+                          </View>
+                        );
+                      }
+
+                      return hasCategories ? (
+                        <View style={styles.recipeCategories}>
+                          {categoryElements}
+                        </View>
+                      ) : null;
+                    })()}
                   </View>
                 </TouchableOpacity>
               ))}
@@ -714,532 +696,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a4d2e", // Dark forest green
-    position: "relative",
-  },
-  backgroundElements: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    top: 0,
-    left: 0,
-    zIndex: 0,
-  },
-  circle1: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-    top: -50,
-    right: -50,
-  },
-  circle2: {
-    position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: "rgba(255, 255, 255, 0.02)",
-    bottom: 100,
-    left: -30,
-  },
-  circle3: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255, 255, 255, 0.025)",
-    top: "40%",
-    right: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    paddingTop: 10,
-    backgroundColor: "transparent",
-    zIndex: 10,
-  },
-  headerLeft: {
-    width: 40,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerLogo: {
-    width: 200,
-    height: 100,
-  },
-  signOutButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  scrollView: {
-    flex: 1,
-    zIndex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  categoriesSection: {
-    paddingVertical: 20,
-    backgroundColor: "transparent",
-  },
-  categoriesContainer: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    gap: 6,
-    minWidth: 100,
-    justifyContent: "center",
-  },
-  categoryChipActive: {
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-    borderColor: "rgba(255, 255, 255, 0.5)",
-  },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-    opacity: 0.9,
-  },
-  categoryTextActive: {
-    color: "#fff",
-    opacity: 1,
-  },
-  addCategoryButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
-  recipesSection: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#1a4d2e",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
-    maxHeight: "90%",
-    height: "80%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  modalCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalBody: {
-    flex: 1,
-  },
-  modalBodyContent: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  inputContainer: {
-    marginBottom: 24,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.9)",
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    borderWidth: 1.5,
-    borderRadius: 18,
-    borderColor: "rgba(255, 255, 255, 0.25)",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    paddingHorizontal: 20,
-    minHeight: 58,
-  },
-  input: {
-    paddingVertical: 16,
-    fontSize: 16,
-    color: "#fff",
-    backgroundColor: "transparent",
-    flex: 1,
-  },
-  textAreaWrapper: {
-    minHeight: 100,
-  },
-  textArea: {
-    minHeight: 80,
-    paddingTop: 16,
-  },
-  placeholderText: {
-    color: "rgba(255, 255, 255, 0.5)",
-  },
-  rowContainer: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  halfWidth: {
-    flex: 1,
-  },
-  pickerContainer: {
-    marginTop: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    overflow: "hidden",
-  },
-  pickerOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-  },
-  pickerOptionActive: {
-    backgroundColor: "#fff",
-  },
-  pickerOptionText: {
-    fontSize: 15,
-    color: "#fff",
-    fontWeight: "500",
-  },
-  pickerOptionTextActive: {
-    color: "#1a4d2e",
-    fontWeight: "600",
-  },
-  iconSelectionContainer: {
-    marginBottom: 32,
-  },
-  iconScrollContainer: {
-    paddingVertical: 12,
-    gap: 12,
-  },
-  iconOption: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  iconOptionActive: {
-    backgroundColor: "#fff",
-    borderColor: "#fff",
-  },
-  createButton: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    padding: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  createButtonText: {
-    color: "#1a4d2e",
-    fontSize: 17,
-    fontWeight: "600",
-    letterSpacing: 1,
-  },
-  allRecipesModalContent: {
-    backgroundColor: "#1a4d2e",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
-    maxHeight: "90%",
-    height: "90%",
-  },
-  allRecipesScrollView: {
-    flex: 1,
-  },
-  allRecipesScrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-  allRecipesCard: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 16,
-    marginBottom: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  allRecipesImageContainer: {
-    width: 100,
-    height: 100,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
-  allRecipesImage: {
-    width: "100%",
-    height: "100%",
-  },
-  allRecipesImagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-  },
-  allRecipesContent: {
-    flex: 1,
-    padding: 12,
-    justifyContent: "space-between",
-  },
-  allRecipesName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 4,
-    opacity: 0.95,
-  },
-  allRecipesDescription: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.8)",
-    marginBottom: 8,
-    lineHeight: 16,
-  },
-  allRecipesMeta: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 8,
-    flexWrap: "wrap",
-  },
-  allRecipesMetaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  allRecipesMetaText: {
-    fontSize: 11,
-    color: "rgba(255, 255, 255, 0.85)",
-    fontWeight: "500",
-  },
-  allRecipesFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  allRecipesRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  allRecipesRatingText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  allRecipesCategory: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
-  allRecipesCategoryText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#fff",
-    opacity: 0.95,
-  },
-  viewAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  recipeCard: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 16,
-    marginBottom: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  recipeImageContainer: {
-    width: 120,
-    height: 120,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
-  recipeImage: {
-    width: "100%",
-    height: "100%",
-  },
-  recipeImagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-  },
-  recipeContent: {
-    flex: 1,
-    padding: 12,
-    justifyContent: "space-between",
-  },
-  recipeName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 4,
-    opacity: 0.95,
-  },
-  recipeCreator: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.7)",
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  recipeDescription: {
-    fontSize: 13,
-    color: "rgba(255, 255, 255, 0.8)",
-    marginBottom: 8,
-    lineHeight: 18,
-  },
-  recipeMeta: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 8,
-  },
-  recipeMetaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  recipeMetaText: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.85)",
-    fontWeight: "500",
-  },
-  recipeRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  recipeRatingText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  loadingContainer: {
-    padding: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyContainer: {
-    padding: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.7)",
-  },
-  createButtonDisabled: {
-    opacity: 0.6,
-  },
-});

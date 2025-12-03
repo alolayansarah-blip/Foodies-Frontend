@@ -6,6 +6,7 @@ import { useRecipes } from "@/contexts/RecipesContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 import { getRecipes, Recipe } from "@/services/recipes";
 import { uploadProfileImage } from "@/services/users";
+import { getImageUrl } from "@/utils/imageUtils";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -15,12 +16,12 @@ import {
   Modal,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { styles } from "@/styles/profile";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -448,9 +449,9 @@ export default function ProfileScreen() {
                     onPress={() => setSelectedRecipe(recipe)}
                   >
                     <View style={styles.recipeImageContainer}>
-                      {recipe.image ? (
+                      {getImageUrl(recipe.image) ? (
                         <Image
-                          source={{ uri: recipe.image }}
+                          source={{ uri: getImageUrl(recipe.image)! }}
                           style={styles.recipeImage}
                           contentFit="cover"
                         />
@@ -484,9 +485,9 @@ export default function ProfileScreen() {
               {mockSavedRecipes.map((recipe) => (
                 <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
                   <View style={styles.recipeImageContainer}>
-                    {recipe.image ? (
+                    {getImageUrl(recipe.image) ? (
                       <Image
-                        source={{ uri: recipe.image }}
+                        source={{ uri: getImageUrl(recipe.image)! }}
                         style={styles.recipeImage}
                         contentFit="cover"
                       />
@@ -517,9 +518,9 @@ export default function ProfileScreen() {
               {mockRecipes.map((recipe) => (
                 <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
                   <View style={styles.recipeImageContainer}>
-                    {recipe.image ? (
+                    {getImageUrl(recipe.image) ? (
                       <Image
-                        source={{ uri: recipe.image }}
+                        source={{ uri: getImageUrl(recipe.image)! }}
                         style={styles.recipeImage}
                         contentFit="cover"
                       />
@@ -641,406 +642,3 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1a4d2e", // Dark forest green
-    position: "relative",
-  },
-  backgroundElements: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    top: 0,
-    left: 0,
-    zIndex: 0,
-  },
-  circle1: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-    top: -50,
-    right: -50,
-  },
-  circle2: {
-    position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: "rgba(255, 255, 255, 0.02)",
-    bottom: 100,
-    left: -30,
-  },
-  circle3: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255, 255, 255, 0.025)",
-    top: "40%",
-    right: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    paddingTop: 10,
-    backgroundColor: "transparent",
-    zIndex: 10,
-  },
-  headerLeft: {
-    width: 40,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerLogo: {
-    width: 200,
-    height: 100,
-  },
-  signOutButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  scrollView: {
-    flex: 1,
-    zIndex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
-  profileHeader: {
-    alignItems: "center",
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-  },
-  avatarWrapper: {
-    position: "relative",
-    marginBottom: 24, // extra space so username is fully visible below avatar
-  },
-  avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  avatarImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  editIconContainer: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderColor: "#fff",
-  },
-  userNameContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-    gap: 8,
-  },
-  userName: {
-    textAlign: "center",
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff",
-    opacity: 0.95,
-  },
-  userNameInput: {
-    fontSize: 28,
-    fontWeight: "bold",
-    textAlign: "center",
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 200,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    color: "#fff",
-  },
-  editNameButton: {
-    padding: 4,
-  },
-  userEmail: {
-    opacity: 0.7,
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 24,
-    color: "rgba(255, 255, 255, 0.8)",
-  },
-  bioContainer: {
-    width: "100%",
-    marginBottom: 20,
-    paddingHorizontal: 24,
-  },
-  bioLabel: {
-    fontSize: 16,
-    marginBottom: 8,
-    fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.9)",
-  },
-  bioText: {
-    fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.8,
-    color: "rgba(255, 255, 255, 0.9)",
-  },
-  bioInput: {
-    fontSize: 14,
-    lineHeight: 20,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minHeight: 80,
-    textAlignVertical: "top",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    color: "#fff",
-  },
-  genderContainer: {
-    width: "100%",
-    marginBottom: 20,
-    paddingHorizontal: 24,
-  },
-  genderLabel: {
-    fontSize: 16,
-    marginBottom: 8,
-    fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.9)",
-  },
-  genderText: {
-    fontSize: 14,
-    opacity: 0.8,
-    color: "rgba(255, 255, 255, 0.9)",
-  },
-  editButton: {
-    padding: 4,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  section: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    marginBottom: 16,
-    marginTop: 16,
-  },
-  recipesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  recipeCard: {
-    width: "48%",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    marginBottom: 16,
-  },
-  recipeImageContainer: {
-    width: "100%",
-    height: 120,
-    borderRadius: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  recipeImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 8,
-  },
-  recipeName: {
-    marginBottom: 4,
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-    opacity: 0.95,
-  },
-  recipeDate: {
-    fontSize: 12,
-    opacity: 0.7,
-    color: "rgba(255, 255, 255, 0.8)",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "flex-end",
-  },
-  modalContainer: {
-    backgroundColor: "#1a4d2e",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "90%",
-    height: "90%",
-  },
-  modalContent: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-  },
-  modalCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalScrollView: {
-    flex: 1,
-  },
-  modalScrollContent: {
-    paddingBottom: 24,
-    flexGrow: 1,
-  },
-  modalImageContainer: {
-    width: "90%",
-    maxWidth: 350,
-    height: 200,
-    marginBottom: 24,
-    marginTop: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    alignSelf: "center",
-  },
-  modalImage: {
-    width: "100%",
-    height: "100%",
-  },
-  modalImagePlaceholder: {
-    width: "90%",
-    maxWidth: 350,
-    height: 200,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    alignSelf: "center",
-  },
-  modalInfoContainer: {
-    paddingHorizontal: 24,
-    marginTop: 24,
-    paddingBottom: 24,
-    width: "100%",
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  modalRecipeTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 8,
-    marginTop: 10,
-    opacity: 0.95,
-    flexWrap: "wrap",
-    width: "100%",
-    lineHeight: 36,
-  },
-  modalDate: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginBottom: 24,
-    color: "rgba(255, 255, 255, 0.8)",
-  },
-  modalDescriptionWrapper: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 4,
-    padding: 16,
-    marginTop: 8,
-  },
-  modalDescriptionLabel: {
-    fontSize: 18,
-    marginBottom: 12,
-    fontWeight: "600",
-    color: "#fff",
-    opacity: 0.95,
-  },
-  modalDescription: {
-    fontSize: 16,
-    lineHeight: 24,
-    opacity: 0.8,
-    color: "rgba(255, 255, 255, 0.9)",
-  },
-  modalNoDescription: {
-    fontSize: 14,
-    opacity: 0.6,
-    fontStyle: "italic",
-    marginTop: 8,
-    color: "rgba(255, 255, 255, 0.7)",
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingText: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.7)",
-  },
-  emptyRecipesContainer: {
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyRecipesText: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.7)",
-    textAlign: "center",
-  },
-});

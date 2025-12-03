@@ -25,7 +25,6 @@ export interface RecipeQueryParams {
 // Get all recipes (supports query params)
 export const getRecipes = async (params?: RecipeQueryParams): Promise<Recipe[]> => {
   const response = await api.get<any>('/api/recipes', { params });
-  console.log('Recipes API response:', JSON.stringify(response.data, null, 2));
   
   // Handle different response structures
   const data = response.data;
@@ -43,8 +42,19 @@ export const getRecipes = async (params?: RecipeQueryParams): Promise<Recipe[]> 
 
 // Get recipe by ID
 export const getRecipeById = async (id: string): Promise<Recipe> => {
-  const response = await api.get<Recipe>(`/api/recipes/${id}`);
-  return response.data;
+  const response = await api.get<any>(`/api/recipes/${id}`);
+  
+  // Handle different response structures
+  // Backend might return: { data: { ...recipe } } or just { ...recipe }
+  const data = response.data;
+  
+  // If response has a nested data property, use it
+  if (data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+    return data.data;
+  }
+  
+  // Otherwise return the data directly
+  return data;
 };
 
 // Create recipe

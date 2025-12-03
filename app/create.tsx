@@ -1,10 +1,9 @@
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/contexts/AuthContext";
 import { Category, createCategory, getCategories } from "@/services/categories";
-import { createIngredient, getIngredients, Ingredient } from "@/services/ingredients";
+import { createIngredient } from "@/services/ingredients";
 import { createRecipeIngredient } from "@/services/recipeIngredients";
 import { createRecipe } from "@/services/recipes";
-import { styles } from "@/styles/create";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -20,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { styles } from "@/styles/create";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -29,21 +29,19 @@ type CreateTab = "recipe" | "ingredient" | "category";
 
 export default function CreateScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+
   const [activeTab, setActiveTab] = useState<CreateTab>("recipe");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Recipe form state
-  const [recipeTitle, setRecipeTitle] = useState<string>("");
+  const [recipeTitle, setRecipeTitle] = useState("");
   const [recipeImage, setRecipeImage] = useState<string | null>(null);
-  const [recipeCategoryId, setRecipeCategoryId] = useState<string>("");
-  const [recipeDescription, setRecipeDescription] = useState<string>("");
-  const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
-  const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
+  const [recipeCategoryId, setRecipeCategoryId] = useState("");
+  const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>(
+    []
+  );
+  const [recipeDescription, setRecipeDescription] = useState("");
 
   // Ingredient form state
   const [ingredientName, setIngredientName] = useState("");
@@ -51,45 +49,38 @@ export default function CreateScreen() {
   // Category form state
   const [categoryName, setCategoryName] = useState("");
 
+  // Shared state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [ingredients, setIngredients] = useState<any[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch categories and ingredients
   useEffect(() => {
-    if (activeTab === "recipe") {
-      fetchCategories();
-      fetchIngredients();
-    }
-  }, [activeTab]);
-
-  const fetchCategories = async () => {
-    try {
+    const fetchData = async () => {
       setIsLoadingCategories(true);
-      const apiCategories = await getCategories();
-      setCategories(apiCategories);
-    } catch (error: any) {
-      console.error("Error fetching categories:", error);
-    } finally {
-      setIsLoadingCategories(false);
-    }
-  };
-
-  const fetchIngredients = async () => {
-    try {
       setIsLoadingIngredients(true);
-      const apiIngredients = await getIngredients();
-      // Ensure we always have an array
-      if (Array.isArray(apiIngredients)) {
-        setIngredients(apiIngredients);
-      } else if ((apiIngredients as any)?.data && Array.isArray((apiIngredients as any).data)) {
-        setIngredients((apiIngredients as any).data);
-      } else {
+      try {
+        const [categoriesData, ingredientsData] = await Promise.all([
+          getCategories(),
+          fetch(`${process.env.EXPO_PUBLIC_API_URL}/ingredients`).then((res) =>
+            res.json()
+          ),
+        ]);
+        setCategories(categoriesData || []);
+        setIngredients(ingredientsData || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setCategories([]);
         setIngredients([]);
+      } finally {
+        setIsLoadingCategories(false);
+        setIsLoadingIngredients(false);
       }
-    } catch (error: any) {
-      console.error("Error fetching ingredients:", error);
-      setIngredients([]); // Set empty array on error
-    } finally {
-      setIsLoadingIngredients(false);
-    }
-  };
-
+    };
+    fetchData();
+  }, []);
 
   const requestImagePermissions = async () => {
     if (Platform.OS !== "web") {
@@ -168,23 +159,23 @@ export default function CreateScreen() {
       Alert.alert("Error", "Please enter recipe steps or directions");
       return;
     }
-    if (!user?._id) {
+
+    if (!user) {
       Alert.alert("Error", "User information is missing");
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      const userId = user._id || (user as any)?.id;
-      const recipeData: any = {
-        title: recipeTitle.trim(),
-        description: recipeDescription.trim(),
+      const userId = user.id || (user as any)?._id;
+      const createdRecipe = await createRecipe({
+        title: recipeTitle,
+        description: recipeDescription,
         image: recipeImage,
         user_id: userId,
         category_id: recipeCategoryId,
-      };
-
-      const createdRecipe = await createRecipe(recipeData);
+      });
+      
       const recipeId = createdRecipe.id || (createdRecipe as any)._id;
 
       // Create recipe-ingredient relationships
@@ -200,7 +191,7 @@ export default function CreateScreen() {
           }
         }
       }
-
+      
       Alert.alert("Success", "Recipe created successfully!", [
         {
           text: "OK",
@@ -209,14 +200,18 @@ export default function CreateScreen() {
             setRecipeTitle("");
             setRecipeImage(null);
             setRecipeCategoryId("");
-            setRecipeDescription("");
             setSelectedIngredientIds([]);
+            setRecipeDescription("");
+            router.back();
           },
         },
       ]);
     } catch (error: any) {
       console.error("Error creating recipe:", error);
-      Alert.alert("Error", error?.message || "Failed to create recipe");
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to create recipe. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -228,25 +223,28 @@ export default function CreateScreen() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      await createIngredient({
-        name: ingredientName.trim(),
-        ingredientName: ingredientName.trim(),
-      });
-      // Refresh ingredients list
-      await fetchIngredients();
+      await createIngredient({ name: ingredientName });
       Alert.alert("Success", "Ingredient created successfully!", [
         {
           text: "OK",
           onPress: () => {
             setIngredientName("");
+            // Refresh ingredients list
+            fetch(`${process.env.EXPO_PUBLIC_API_URL}/ingredients`)
+              .then((res) => res.json())
+              .then((data) => setIngredients(data || []))
+              .catch((err) => console.error("Error refreshing ingredients:", err));
           },
         },
       ]);
     } catch (error: any) {
       console.error("Error creating ingredient:", error);
-      Alert.alert("Error", error?.message || "Failed to create ingredient");
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to create ingredient. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -258,23 +256,27 @@ export default function CreateScreen() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      await createCategory({
-        categoryName: categoryName.trim(),
-        name: categoryName.trim(),
-      });
+      await createCategory({ categoryName: categoryName });
       Alert.alert("Success", "Category created successfully!", [
         {
           text: "OK",
           onPress: () => {
             setCategoryName("");
+            // Refresh categories list
+            getCategories()
+              .then((data) => setCategories(data || []))
+              .catch((err) => console.error("Error refreshing categories:", err));
           },
         },
       ]);
     } catch (error: any) {
       console.error("Error creating category:", error);
-      Alert.alert("Error", error?.message || "Failed to create category");
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to create category. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -377,48 +379,48 @@ export default function CreateScreen() {
             {Array.isArray(ingredients) && ingredients.length > 0 ? (
               ingredients.map((ingredient) => {
                 const ingredientId = ingredient.id || (ingredient as any)._id;
-              const isSelected = selectedIngredientIds.includes(ingredientId);
-              return (
-                <TouchableOpacity
-                  key={ingredientId}
-                  style={[
-                    styles.pickerOption,
-                    styles.multiSelectOption,
-                    isSelected && styles.pickerOptionActive,
-                  ]}
-                  onPress={() => {
-                    if (isSelected) {
-                      setSelectedIngredientIds(
-                        selectedIngredientIds.filter((id) => id !== ingredientId)
-                      );
-                    } else {
-                      setSelectedIngredientIds([...selectedIngredientIds, ingredientId]);
-                    }
-                  }}
-                >
-                  <View style={styles.checkboxContainer}>
-                    <View
-                      style={[
-                        styles.checkbox,
-                        isSelected && styles.checkboxChecked,
-                      ]}
-                    >
-                      {isSelected && (
-                        <Ionicons name="checkmark" size={16} color="#fff" />
-                      )}
+                const isSelected = selectedIngredientIds.includes(ingredientId);
+                return (
+                  <TouchableOpacity
+                    key={ingredientId}
+                    style={[
+                      styles.pickerOption,
+                      styles.multiSelectOption,
+                      isSelected && styles.pickerOptionActive,
+                    ]}
+                    onPress={() => {
+                      if (isSelected) {
+                        setSelectedIngredientIds(
+                          selectedIngredientIds.filter((id) => id !== ingredientId)
+                        );
+                      } else {
+                        setSelectedIngredientIds([...selectedIngredientIds, ingredientId]);
+                      }
+                    }}
+                  >
+                    <View style={styles.checkboxContainer}>
+                      <View
+                        style={[
+                          styles.checkbox,
+                          isSelected && styles.checkboxChecked,
+                        ]}
+                      >
+                        {isSelected && (
+                          <Ionicons name="checkmark" size={16} color="#fff" />
+                        )}
+                      </View>
+                      <ThemedText
+                        style={[
+                          styles.pickerOptionText,
+                          isSelected && styles.pickerOptionTextActive,
+                        ]}
+                      >
+                        {ingredient.name || ingredient.ingredientName || ""}
+                      </ThemedText>
                     </View>
-                    <ThemedText
-                      style={[
-                        styles.pickerOptionText,
-                        isSelected && styles.pickerOptionTextActive,
-                      ]}
-                    >
-                      {ingredient.name || ingredient.ingredientName || ""}
-                    </ThemedText>
-                  </View>
-                </TouchableOpacity>
-              );
-            })
+                  </TouchableOpacity>
+                );
+              })
             ) : (
               <View style={styles.emptyState}>
                 <ThemedText style={styles.emptyStateText}>
@@ -435,7 +437,7 @@ export default function CreateScreen() {
         <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Enter step-by-step instructions or directions..."
+            placeholder="Enter cooking steps or directions"
             placeholderTextColor="rgba(255, 255, 255, 0.5)"
             value={recipeDescription}
             onChangeText={setRecipeDescription}
@@ -530,21 +532,26 @@ export default function CreateScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Background Elements */}
+      {/* Creative Background Elements */}
       <View style={styles.backgroundElements}>
         <View style={styles.circle1} />
         <View style={styles.circle2} />
         <View style={styles.circle3} />
       </View>
 
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.keyboardView}
-        >
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <SafeAreaView edges={["top"]} style={{ flex: 1 }}>
           {/* Header */}
-          <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-            <View style={styles.headerLeft} />
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
             <ThemedText style={styles.headerTitle}>Create New</ThemedText>
             <View style={styles.headerRight} />
           </View>
@@ -555,10 +562,14 @@ export default function CreateScreen() {
               style={[styles.tab, activeTab === "recipe" && styles.tabActive]}
               onPress={() => setActiveTab("recipe")}
             >
-              <MaterialCommunityIcons
-                name="chef-hat"
-                size={20}
-                color={activeTab === "recipe" ? "#fff" : "rgba(255, 255, 255, 0.7)"}
+              <Ionicons
+                name="restaurant"
+                size={18}
+                color={
+                  activeTab === "recipe"
+                    ? "#fff"
+                    : "rgba(255, 255, 255, 0.7)"
+                }
               />
               <ThemedText
                 style={[
@@ -569,15 +580,18 @@ export default function CreateScreen() {
                 Recipe
               </ThemedText>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.tab, activeTab === "ingredient" && styles.tabActive]}
               onPress={() => setActiveTab("ingredient")}
             >
-              <MaterialCommunityIcons
-                name="carrot"
-                size={20}
-                color={activeTab === "ingredient" ? "#fff" : "rgba(255, 255, 255, 0.7)"}
+              <Ionicons
+                name="leaf"
+                size={18}
+                color={
+                  activeTab === "ingredient"
+                    ? "#fff"
+                    : "rgba(255, 255, 255, 0.7)"
+                }
               />
               <ThemedText
                 style={[
@@ -588,15 +602,18 @@ export default function CreateScreen() {
                 Ingredient
               </ThemedText>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.tab, activeTab === "category" && styles.tabActive]}
               onPress={() => setActiveTab("category")}
             >
-              <MaterialCommunityIcons
-                name="tag"
-                size={20}
-                color={activeTab === "category" ? "#fff" : "rgba(255, 255, 255, 0.7)"}
+              <Ionicons
+                name="folder"
+                size={18}
+                color={
+                  activeTab === "category"
+                    ? "#fff"
+                    : "rgba(255, 255, 255, 0.7)"
+                }
               />
               <ThemedText
                 style={[
@@ -613,9 +630,8 @@ export default function CreateScreen() {
           {activeTab === "recipe" && renderRecipeForm()}
           {activeTab === "ingredient" && renderIngredientForm()}
           {activeTab === "category" && renderCategoryForm()}
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
-

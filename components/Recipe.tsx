@@ -34,69 +34,6 @@ const Recipe = ({ recipe }: { recipe: RecipeType }) => {
           borderColor: "rgba(255, 255, 255, 0.2)",
         }}
       >
-        <Text
-          style={{
-            color: "white",
-            fontSize: 24,
-            fontWeight: "bold",
-            marginBottom: 8,
-            flexWrap: "wrap",
-            flexShrink: 1,
-          }}
-          numberOfLines={0}
-        >
-          {recipe.title}
-        </Text>
-        <Text
-          style={{
-            color: "white",
-            fontSize: 16,
-            fontWeight: "600",
-            opacity: 0.8,
-          }}
-        >
-          Created By:{" "}
-          {recipe.user?.userName ||
-            (recipe.user as any)?.name ||
-            (recipe.user as any)?.username ||
-            (recipe as any)?.userName ||
-            (recipe as any)?.username ||
-            "Unknown Chef"}
-        </Text>
-
-        {/* Recipe Info Row */}
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 15,
-            marginTop: 10,
-            marginBottom: 10,
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "rgba(255, 255, 255, 0.15)",
-              padding: 8,
-              borderRadius: 8,
-            }}
-          >
-            <Text style={{ color: "white", fontSize: 12 }}>
-              ⏱️ {recipe.cookTime || 0} min
-            </Text>
-          </View>
-          <View
-            style={{
-              backgroundColor: "rgba(255, 255, 255, 0.15)",
-              padding: 8,
-              borderRadius: 8,
-            }}
-          >
-            <Text style={{ color: "white", fontSize: 12 }}>
-              🍽️ {recipe.servings || 0} servings
-            </Text>
-          </View>
-        </View>
-
         {/* Categories/Cuisine Tags */}
         <View
           style={{
