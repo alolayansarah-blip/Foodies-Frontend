@@ -52,11 +52,8 @@ export const uploadProfileImage = async (id: string, imageUri: string): Promise<
     type,
   } as any);
 
-  const response = await api.post<User>(`/api/users/${id}/profile-image`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  // Axios will automatically set Content-Type with boundary for FormData
+  const response = await api.post<User>(`/api/users/${id}/profile-image`, formData);
   
   return response.data;
 };

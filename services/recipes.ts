@@ -75,11 +75,8 @@ export const uploadRecipeImage = async (id: string, imageUri: string): Promise<R
     type,
   } as any);
 
-  const response = await api.post<Recipe>(`/api/recipes/${id}/image`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  // Axios will automatically set Content-Type with boundary for FormData
+  const response = await api.post<Recipe>(`/api/recipes/${id}/image`, formData);
   
   return response.data;
 };

@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRecipes } from "@/contexts/RecipesContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 import { getRecipes, Recipe } from "@/services/recipes";
+import { uploadProfileImage } from "@/services/users";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -156,7 +157,22 @@ export default function ProfileScreen() {
       }
 
       if (!result.canceled && result.assets[0]) {
-        setProfileImage(result.assets[0].uri);
+        const imageUri = result.assets[0].uri;
+        setProfileImage(imageUri);
+        
+        // Upload image to backend as FormData
+        if (user) {
+          const userId = user.id || (user as any)?._id;
+          if (userId) {
+            try {
+              await uploadProfileImage(userId, imageUri);
+              Alert.alert("Success", "Profile image uploaded successfully!");
+            } catch (uploadError) {
+              console.error("Error uploading profile image:", uploadError);
+              Alert.alert("Error", "Failed to upload profile image. Please try again.");
+            }
+          }
+        }
       }
     } catch (error) {
       Alert.alert("Error", "Failed to pick image. Please try again.");
