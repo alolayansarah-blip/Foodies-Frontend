@@ -28,8 +28,25 @@ export const getCategories = async (): Promise<Category[]> => {
 
 // Get category by ID
 export const getCategoryById = async (id: string): Promise<Category> => {
-  const response = await api.get<Category>(`/api/categories/${id}`);
-  return response.data;
+  const response = await api.get<any>(`/api/categories/${id}`);
+  console.log(`Category by ID API response for ${id}:`, JSON.stringify(response.data, null, 2));
+  
+  // Handle different response structures (similar to getRecipeById)
+  // Backend might return: { data: { ...category } } or just { ...category }
+  const data = response.data;
+  
+  // If response has a nested data property and it's an object (not array), use it
+  if (data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+    return data.data;
+  }
+  
+  // If response has a nested category property, use it
+  if (data?.category && typeof data.category === 'object' && !Array.isArray(data.category)) {
+    return data.category;
+  }
+  
+  // Otherwise return the data directly
+  return data;
 };
 
 // Create category

@@ -3,6 +3,7 @@ import { config } from "@/constants/config";
 import { getCategoryById } from "@/services/categories";
 import { getIngredientsByRecipe } from "@/services/recipeIngredients";
 import { getRecipeById } from "@/services/recipes";
+import { getUserById } from "@/services/users";
 import { styles } from "@/styles/recipeDetail";
 import RecipeType from "@/types/RecipeType";
 import { getImageUrl } from "@/utils/imageUtils";
@@ -50,8 +51,27 @@ export default function RecipeDetailScreen() {
         throw new Error("Recipe ID is required");
       }
 
-      // Helper function to extract user data
-      const extractUserData = (recipeData: any) => {
+      // Helper function to safely convert ObjectId to string
+      const toObjectIdString = (value: any): string => {
+        if (!value) return "";
+        // If it's already a string, return it
+        if (typeof value === 'string') return value;
+        // If it has toString method, use it
+        if (value && typeof value.toString === 'function') {
+          const str = value.toString();
+          // Check if it's not "[object Object]"
+          if (str !== "[object Object]") return str;
+        }
+        // If it's an object with _id or id property
+        if (typeof value === 'object' && value !== null) {
+          if (value._id) return toObjectIdString(value._id);
+          if (value.id) return toObjectIdString(value.id);
+        }
+        return "";
+      };
+
+      // Helper function to extract user data (async to fetch from users endpoint if needed)
+      const extractUserData = async (recipeData: any) => {
         console.log("Extracting user data from:", JSON.stringify(recipeData, null, 2));
         
         // Try nested user object first (MongoDB populated field)
@@ -61,10 +81,10 @@ export default function RecipeDetailScreen() {
           if (typeof user === 'object' && user !== null) {
             const userData = {
               _id:
-                user._id?.toString() ||
-                user.id?.toString() ||
-                recipeData.user_id?.toString() ||
-                recipeData.userId?.toString() ||
+                toObjectIdString(user._id) ||
+                toObjectIdString(user.id) ||
+                toObjectIdString(recipeData.user_id) ||
+                toObjectIdString(recipeData.userId) ||
                 "",
               userName:
                 user.userName ||
@@ -85,15 +105,41 @@ export default function RecipeDetailScreen() {
           }
         }
         
-        // Try top-level user fields
-        if (recipeData.user_id || recipeData.userId) {
-          const userData = {
-            _id: (recipeData.user_id || recipeData.userId)?.toString() || "",
-            userName: recipeData.userName || recipeData.username || recipeData.user_name || "",
-            userProfilePicture: recipeData.userProfilePicture || recipeData.profileImage || null,
-          };
-          console.log("Extracted user data from top-level fields:", userData);
-          return userData;
+        // Try top-level user fields (user_id is ObjectId reference)
+        // If we have user_id but no populated user data, fetch from users endpoint
+        const userId = toObjectIdString(recipeData.user_id || recipeData.userId);
+        if (userId) {
+          // If we already have username in recipe data, use it
+          if (recipeData.userName || recipeData.username || recipeData.user_name) {
+            const userData = {
+              _id: userId,
+              userName: recipeData.userName || recipeData.username || recipeData.user_name || "",
+              userProfilePicture: recipeData.userProfilePicture || recipeData.profileImage || null,
+            };
+            console.log("Extracted user data from top-level fields:", userData);
+            return userData;
+          }
+          
+          // Otherwise, fetch from users endpoint
+          try {
+            console.log(`Fetching user data from users endpoint for user_id: ${userId}`);
+            const user = await getUserById(userId);
+            const userData = {
+              _id: userId,
+              userName: user.userName || user.name || user.username || "",
+              userProfilePicture: user.userProfilePicture || user.profileImage || null,
+            };
+            console.log("Fetched user data from users endpoint:", userData);
+            return userData;
+          } catch (error) {
+            console.error(`Error fetching user ${userId} from users endpoint:`, error);
+            // Return user data with just the ID if fetch fails
+            return {
+              _id: userId,
+              userName: "",
+              userProfilePicture: null,
+            };
+          }
         }
         
         // Try to find user data in any nested structure
@@ -101,7 +147,7 @@ export default function RecipeDetailScreen() {
           const createdBy = recipeData.createdBy;
           if (typeof createdBy === 'object' && createdBy !== null) {
             return {
-              _id: createdBy._id?.toString() || createdBy.id?.toString() || "",
+              _id: toObjectIdString(createdBy._id || createdBy.id),
               userName: createdBy.userName || createdBy.name || createdBy.username || "",
               userProfilePicture: createdBy.userProfilePicture || createdBy.profileImage || null,
             };
@@ -123,7 +169,7 @@ export default function RecipeDetailScreen() {
         // Ensure we have the actual recipe object (handle MongoDB _id)
         const actualRecipe = recipeData || {};
         
-        const userData = extractUserData(actualRecipe);
+        const userData = await extractUserData(actualRecipe);
         console.log("Extracted userData:", userData);
         
         const imageUrl = getImageUrl(
@@ -136,11 +182,11 @@ export default function RecipeDetailScreen() {
 
         // Map the response to RecipeType format
         // MongoDB uses _id, so prioritize _id over id
-        const mappedRecipeIdMain: string = (actualRecipe as any)._id || actualRecipe.id || recipeId;
-        
+        const mappedRecipeIdMain: string = toObjectIdString((actualRecipe as any)._id) || toObjectIdString(actualRecipe.id) || recipeId;
+
         // Ensure user data is properly set
         const finalUserData = userData || {
-          _id: (actualRecipe as any).user_id?.toString() || (actualRecipe as any).userId?.toString() || "",
+          _id: toObjectIdString((actualRecipe as any).user_id || (actualRecipe as any).userId),
           userName: (actualRecipe as any).userName || (actualRecipe as any).username || "",
           userProfilePicture: null,
         };
@@ -153,30 +199,34 @@ export default function RecipeDetailScreen() {
         
         // Handle category based on schema structure
         // Schema has category_id (ObjectId ref), category may be populated
-        let categoryData: Array<{ _id: string; categoryName: string }> = [];
-        const categoryId = actualRecipe.category_id || actualRecipe.categoryId || "";
+        // Backend uses 'name' field, not 'categoryName'
+        let categoryData: Array<{ _id: string; name: string }> = [];
+        const categoryIdRaw = actualRecipe.category_id || actualRecipe.categoryId || "";
+        const categoryId = categoryIdRaw ? toObjectIdString(categoryIdRaw) : "";
         
         // If category is populated (object), use it
         if (actualRecipe.category && typeof actualRecipe.category === "object" && !Array.isArray(actualRecipe.category)) {
           categoryData = [{
-            _id: actualRecipe.category._id || actualRecipe.category.id || categoryId,
-            categoryName: actualRecipe.category.categoryName || actualRecipe.category.name || "",
+            _id: toObjectIdString(actualRecipe.category._id || actualRecipe.category.id || categoryId),
+            name: actualRecipe.category.name || actualRecipe.category.categoryName || "",
           }];
         }
-        // If category_id exists but category is not populated, fetch it
+        // If category_id exists but category is not populated, fetch it from backend
         else if (categoryId) {
           try {
+            console.log(`Fetching category data from backend for category_id: ${categoryId}`);
             const category = await getCategoryById(categoryId);
             categoryData = [{
               _id: categoryId,
-              categoryName: category.categoryName || category.name || "",
+              name: category.name || category.categoryName || "",
             }];
+            console.log(`Fetched category data from backend:`, categoryData);
           } catch (error) {
-            console.error(`Error fetching category ${categoryId}:`, error);
+            console.error(`Error fetching category ${categoryId} from backend:`, error);
             // If fetch fails, just store the ID
             categoryData = [{
               _id: categoryId,
-              categoryName: "",
+              name: "",
             }];
           }
         }
@@ -231,7 +281,7 @@ export default function RecipeDetailScreen() {
           // Ensure we have the actual recipe object
           const actualRecipe = recipeData || {};
 
-          const userData = extractUserData(actualRecipe);
+          const userData = await extractUserData(actualRecipe);
           console.log("Extracted userData (fallback):", userData);
           
           const imageUrl = getImageUrl(
@@ -245,9 +295,9 @@ export default function RecipeDetailScreen() {
           // MongoDB uses _id, so prioritize _id over id
           const mappedRecipeIdFallback: string = (actualRecipe as any)._id || actualRecipe.id || recipeId;
 
-          // Ensure user data is properly set
+          // Ensure user data is properly set (reuse toObjectIdString from outer scope)
           const finalUserData = userData || {
-            _id: (actualRecipe as any).user_id?.toString() || (actualRecipe as any).userId?.toString() || "",
+            _id: toObjectIdString((actualRecipe as any).user_id || (actualRecipe as any).userId),
             userName: (actualRecipe as any).userName || (actualRecipe as any).username || "",
             userProfilePicture: null,
           };
@@ -260,30 +310,34 @@ export default function RecipeDetailScreen() {
 
           // Handle category based on schema structure
           // Schema has category_id (ObjectId ref), category may be populated
-          let categoryData: Array<{ _id: string; categoryName: string }> = [];
-          const categoryId = actualRecipe.category_id || actualRecipe.categoryId || "";
+          // Backend uses 'name' field, not 'categoryName'
+          let categoryData: Array<{ _id: string; name: string }> = [];
+          const categoryIdRaw = actualRecipe.category_id || actualRecipe.categoryId || "";
+          const categoryId = categoryIdRaw ? toObjectIdString(categoryIdRaw) : "";
           
           // If category is populated (object), use it
           if (actualRecipe.category && typeof actualRecipe.category === "object" && !Array.isArray(actualRecipe.category)) {
             categoryData = [{
-              _id: actualRecipe.category._id || actualRecipe.category.id || categoryId,
-              categoryName: actualRecipe.category.categoryName || actualRecipe.category.name || "",
+              _id: toObjectIdString(actualRecipe.category._id || actualRecipe.category.id || categoryId),
+              name: actualRecipe.category.name || actualRecipe.category.categoryName || "",
             }];
           }
-          // If category_id exists but category is not populated, fetch it
+          // If category_id exists but category is not populated, fetch it from backend
           else if (categoryId) {
             try {
+              console.log(`Fetching category data from backend for category_id: ${categoryId}`);
               const category = await getCategoryById(categoryId);
               categoryData = [{
                 _id: categoryId,
-                categoryName: category.categoryName || category.name || "",
+                name: category.name || category.categoryName || "",
               }];
+              console.log(`Fetched category data from backend:`, categoryData);
             } catch (error) {
-              console.error(`Error fetching category ${categoryId}:`, error);
+              console.error(`Error fetching category ${categoryId} from backend:`, error);
               // If fetch fails, just store the ID
               categoryData = [{
                 _id: categoryId,
-                categoryName: "",
+                name: "",
               }];
             }
           }
@@ -446,7 +500,7 @@ export default function RecipeDetailScreen() {
                   {recipe.category.map((cat, index) => (
                     <View key={index} style={styles.categoryTag}>
                       <ThemedText style={styles.categoryText}>
-                        {cat.categoryName}
+                        {cat.name}
                       </ThemedText>
                     </View>
                   ))}

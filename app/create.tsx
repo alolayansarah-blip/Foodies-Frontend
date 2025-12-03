@@ -258,7 +258,7 @@ export default function CreateScreen() {
 
     setIsSubmitting(true);
     try {
-      await createCategory({ categoryName: categoryName });
+      await createCategory({ name: categoryName });
       Alert.alert("Success", "Category created successfully!", [
         {
           text: "OK",
@@ -362,7 +362,7 @@ export default function CreateScreen() {
                       styles.pickerOptionTextActive,
                   ]}
                 >
-                  {category.categoryName || category.name || ""}
+                  {category.name || category.categoryName || ""}
                 </ThemedText>
               </TouchableOpacity>
             ))}

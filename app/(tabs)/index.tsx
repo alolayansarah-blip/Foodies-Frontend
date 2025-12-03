@@ -98,11 +98,12 @@ export default function HomeScreen() {
       }
 
       // Map API categories and add icon field (using first letter or default)
-      // Backend uses _id, so map it to id for frontend
+      // Backend uses _id, preserve it for filtering
       const mappedCategories = apiCategories.map((cat) => ({
         ...cat,
-        id: cat.id || cat._id || String(Date.now() + Math.random()), // Use _id if id doesn't exist
-        name: cat.categoryName || cat.name || "",
+        _id: cat._id || cat.id, // Preserve original _id
+        id: cat._id || cat.id || String(Date.now() + Math.random()), // Use _id as id for consistency
+        name: cat.name || cat.categoryName || "",
         icon: "food", // Default icon, can be enhanced later
       }));
       setCategories([ALL_CATEGORY, ...mappedCategories]);
@@ -126,8 +127,9 @@ export default function HomeScreen() {
           (cat) => cat.id === selectedCategory || (cat as any)._id === selectedCategory
         );
         if (selectedCat && selectedCat.id !== "all") {
-          // Prioritize _id for backend (ObjectId format)
-          params.category_id = (selectedCat as any)._id || selectedCat.id;
+          // Use _id for backend filtering (ObjectId format)
+          // selectedCategory should already be the _id since we set id = _id
+          params.category_id = selectedCategory;
         }
       }
 
@@ -140,35 +142,58 @@ export default function HomeScreen() {
         return;
       }
 
+      // Helper function to safely convert ObjectId to string (same as recipe detail page)
+      const toObjectIdString = (value: any): string => {
+        if (!value) return "";
+        // If it's already a string, return it
+        if (typeof value === 'string') return value;
+        // If it has toString method, use it
+        if (value && typeof value.toString === 'function') {
+          const str = value.toString();
+          // Check if it's not "[object Object]"
+          if (str !== "[object Object]") return str;
+        }
+        // If it's an object with _id or id property
+        if (typeof value === 'object' && value !== null) {
+          if (value._id) return toObjectIdString(value._id);
+          if (value.id) return toObjectIdString(value.id);
+        }
+        return "";
+      };
+
       // Map API recipes to match our format (new recipe format: title, image, categories, ingredients, steps)
       // Based on schema: category_id is ObjectId reference, category may be populated
+      // Backend uses 'name' field, not 'categoryName'
       const mappedRecipesPromises = apiRecipes.map(async (recipe: any) => {
         // Handle category based on schema structure
         // Schema has category_id (ObjectId ref), category may be populated
         let categoryData = null;
-        const categoryId = recipe.category_id || recipe.categoryId || "";
+        const categoryIdRaw = recipe.category_id || recipe.categoryId || "";
+        const categoryId = categoryIdRaw ? toObjectIdString(categoryIdRaw) : "";
         
         // If category is populated (object), use it
         if (recipe.category && typeof recipe.category === "object" && !Array.isArray(recipe.category)) {
           categoryData = {
-            _id: recipe.category._id || recipe.category.id || categoryId,
-            categoryName: recipe.category.categoryName || recipe.category.name || "",
+            _id: toObjectIdString(recipe.category._id || recipe.category.id || categoryId),
+            name: recipe.category.name || recipe.category.categoryName || "",
           };
         }
-        // If category_id exists but category is not populated, fetch it
+        // If category_id exists but category is not populated, fetch it from backend
         else if (categoryId) {
           try {
+            console.log(`Fetching category data from backend for category_id: ${categoryId}`);
             const category = await getCategoryById(categoryId);
             categoryData = {
               _id: categoryId,
-              categoryName: category.categoryName || category.name || "",
+              name: category.name || category.categoryName || "",
             };
+            console.log(`Fetched category data from backend:`, categoryData);
           } catch (error) {
-            console.error(`Error fetching category ${categoryId}:`, error);
+            console.error(`Error fetching category ${categoryId} from backend:`, error);
             // If fetch fails, just store the ID
             categoryData = {
               _id: categoryId,
-              categoryName: "",
+              name: "",
             };
           }
         }
@@ -186,6 +211,7 @@ export default function HomeScreen() {
           ),
           // Category structure based on schema
           category: categoryData ? [categoryData] : [],
+          // Ensure category_id is stored as string for comparison (already converted by toObjectIdString)
           category_id: categoryId,
           // Keep description (which is steps/directions)
           description: recipe.description || "",
@@ -249,7 +275,7 @@ export default function HomeScreen() {
       // Add to local state with icon
       const categoryWithIcon = {
         ...newCategory,
-        name: newCategory.categoryName || newCategory.name || "",
+        name: newCategory.name || newCategory.categoryName || "",
         icon: selectedIcon,
       };
 
@@ -269,7 +295,11 @@ export default function HomeScreen() {
   const filteredRecipes =
     selectedCategory === "all"
       ? recipes
-      : recipes.filter((recipe) => recipe.category_id === selectedCategory);
+      : recipes.filter((recipe) => {
+          // Compare recipe.category_id (MongoDB ObjectId) with selectedCategory
+          // selectedCategory is the category's _id (since we set id = _id in mapping)
+          return recipe.category_id === selectedCategory;
+        });
 
   if (isLoading) {
     return (
@@ -430,7 +460,7 @@ export default function HomeScreen() {
                       categoryElements = recipe.category.map((cat: any, index: number) => {
                         const categoryName = typeof cat === 'string' 
                           ? cat 
-                          : (cat?.categoryName || cat?.name || "");
+                          : (cat?.name || cat?.categoryName || "");
                         if (!categoryName) return null;
                         return (
                           <View key={index} style={styles.recipeCategoryTag}>
@@ -441,7 +471,7 @@ export default function HomeScreen() {
                         );
                       }).filter(Boolean);
                     } else if (recipe.category && typeof recipe.category === "object") {
-                      const categoryName = recipe.category.categoryName || recipe.category.name || "";
+                      const categoryName = recipe.category.name || recipe.category.categoryName || "";
                       if (categoryName) {
                         hasCategories = true;
                         categoryElements = (
@@ -658,7 +688,7 @@ export default function HomeScreen() {
                           );
                         }).filter(Boolean);
                       } else if (recipe.category && typeof recipe.category === "object") {
-                        const categoryName = recipe.category.categoryName || recipe.category.name || "";
+                        const categoryName = recipe.category.name || recipe.category.categoryName || "";
                         if (categoryName) {
                           hasCategories = true;
                           categoryElements = (

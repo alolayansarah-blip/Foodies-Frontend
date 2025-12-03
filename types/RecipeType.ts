@@ -16,7 +16,7 @@ interface RecipeType {
   };
   category: Array<{
     _id: string;
-    categoryName: string;
+    name: string;
   }>;
 }
 
