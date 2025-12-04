@@ -7,6 +7,7 @@ import {
   markNotificationAsRead,
   Notification,
 } from "@/services/notifications";
+import { getUserById } from "@/services/users";
 import { styles } from "@/styles/notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -26,6 +27,9 @@ export default function NotificationsScreen() {
   const { logout, user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
+  const [notificationUsers, setNotificationUsers] = useState<
+    Record<string, any>
+  >({});
 
   const fetchNotifications = async () => {
     if (!user) {
@@ -47,6 +51,35 @@ export default function NotificationsScreen() {
           return dateB - dateA;
         });
         setNotifications(sorted);
+
+        // Fetch user info for like/dislike notifications
+        const usersMap: Record<string, any> = {};
+        await Promise.all(
+          sorted
+            .filter((n) => n.type === "like" || n.type === "dislike")
+            .map(async (notification) => {
+              // Try to get user ID from notification data
+              const notificationUserId =
+                (notification as any).liked_by ||
+                (notification as any).disliked_by ||
+                (notification as any).from_user_id ||
+                (notification as any).fromUser?._id;
+
+              if (notificationUserId && notificationUserId !== userId) {
+                try {
+                  const userData = await getUserById(notificationUserId);
+                  usersMap[notification.id || notification._id || ""] =
+                    userData;
+                } catch (error) {
+                  console.error(
+                    `Error fetching user ${notificationUserId}:`,
+                    error
+                  );
+                }
+              }
+            })
+        );
+        setNotificationUsers(usersMap);
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -194,6 +227,30 @@ export default function NotificationsScreen() {
               {notifications.map((notification) => {
                 const notificationId = notification.id || notification._id;
                 const isRead = notification.read || false;
+                const notificationUser =
+                  notificationUsers[notificationId || ""];
+                const userName =
+                  notificationUser?.userName ||
+                  notificationUser?.name ||
+                  notificationUser?.username ||
+                  "Someone";
+
+                // Get icon based on notification type
+                const getNotificationIcon = () => {
+                  switch (notification.type) {
+                    case "like":
+                      return "thumbs-up";
+                    case "dislike":
+                      return "thumbs-down";
+                    case "rating":
+                      return "star";
+                    case "comment":
+                      return "chatbubble";
+                    default:
+                      return "notifications";
+                  }
+                };
+
                 return (
                   <TouchableOpacity
                     key={notificationId || `notification-${Math.random()}`}
@@ -203,6 +260,21 @@ export default function NotificationsScreen() {
                     ]}
                     onPress={() => handleNotificationPress(notification)}
                   >
+                    <View style={styles.notificationIconContainer}>
+                      <Ionicons
+                        name={getNotificationIcon() as any}
+                        size={24}
+                        color={
+                          notification.type === "like"
+                            ? "#4CAF50"
+                            : notification.type === "dislike"
+                            ? "#ff4444"
+                            : notification.type === "rating"
+                            ? "#ffa500"
+                            : "rgba(255, 255, 255, 0.8)"
+                        }
+                      />
+                    </View>
                     <View style={styles.notificationContent}>
                       <View style={styles.notificationHeader}>
                         <ThemedText
@@ -216,7 +288,14 @@ export default function NotificationsScreen() {
                         {!isRead && <View style={styles.unreadDot} />}
                       </View>
                       <ThemedText style={styles.notificationMessage}>
-                        {notification.message}
+                        {notification.type === "like" ||
+                        notification.type === "dislike"
+                          ? `${userName} ${
+                              notification.type === "like"
+                                ? "liked"
+                                : "disliked"
+                            } your recipe "${notification.message || ""}"`
+                          : notification.message}
                       </ThemedText>
                       <ThemedText style={styles.notificationTime}>
                         {formatTime(notification.createdAt)}

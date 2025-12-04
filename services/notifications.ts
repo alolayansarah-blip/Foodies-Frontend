@@ -4,13 +4,17 @@ export interface Notification {
   id?: string;
   _id?: string;
   user_id: string;
-  type: "rating" | "comment" | "like" | "recipe" | "follow";
+  type: "rating" | "comment" | "like" | "dislike" | "recipe" | "follow";
   title: string;
   message: string;
   recipe_id?: string;
   read?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  liked_by?: string;
+  disliked_by?: string;
+  from_user_id?: string;
+  fromUser?: { _id: string; userName?: string; name?: string };
   [key: string]: any;
 }
 

@@ -106,7 +106,17 @@ export const styles = StyleSheet.create({
   notificationsList: {
     paddingHorizontal: 24,
   },
+  notificationIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
   notificationItem: {
+    flexDirection: "row",
     paddingVertical: 16,
     paddingHorizontal: 16,
     marginBottom: 12,

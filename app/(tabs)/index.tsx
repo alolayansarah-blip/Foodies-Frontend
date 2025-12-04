@@ -8,6 +8,13 @@ import {
   getCategories,
   getCategoryById,
 } from "@/services/categories";
+import {
+  createOrUpdateLike,
+  getRecipeLikeCounts,
+  getUserLikeForRecipe,
+  Like,
+} from "@/services/likes";
+import { createNotification } from "@/services/notifications";
 import { getRatings } from "@/services/ratings";
 import { getRecipes, Recipe } from "@/services/recipes";
 import { styles } from "@/styles/home";
@@ -64,6 +71,9 @@ export default function HomeScreen() {
   const [recipeRatings, setRecipeRatings] = useState<Record<string, number>>(
     {}
   );
+  const [recipeLikes, setRecipeLikes] = useState<
+    Record<string, { likes: number; dislikes: number; userLike: Like | null }>
+  >({});
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAllRecipesModal, setShowAllRecipesModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -75,7 +85,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const isLoading = useNavigationLoading();
   const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
+  const { logout, user, isAuthenticated } = useAuth();
 
   // Fetch categories on mount
   useEffect(() => {
@@ -273,6 +283,45 @@ export default function HomeScreen() {
         })
       );
       setRecipeRatings(ratingsMap);
+
+      // Fetch likes/dislikes for all recipes
+      const likesMap: Record<
+        string,
+        { likes: number; dislikes: number; userLike: Like | null }
+      > = {};
+      await Promise.all(
+        mappedRecipes.map(async (recipe) => {
+          const recipeId = recipe.id || (recipe as any)._id;
+          if (recipeId) {
+            try {
+              const counts = await getRecipeLikeCounts(recipeId);
+              let userLike: Like | null = null;
+              if (isAuthenticated && user) {
+                const userId = user._id || (user as any)?.id;
+                if (userId) {
+                  userLike = await getUserLikeForRecipe(recipeId, userId);
+                }
+              }
+              likesMap[recipeId] = {
+                likes: counts.likes,
+                dislikes: counts.dislikes,
+                userLike,
+              };
+            } catch (error) {
+              console.error(
+                `Error fetching likes for recipe ${recipeId}:`,
+                error
+              );
+              likesMap[recipeId] = {
+                likes: 0,
+                dislikes: 0,
+                userLike: null,
+              };
+            }
+          }
+        })
+      );
+      setRecipeLikes(likesMap);
     } catch (error: any) {
       console.error("Error fetching recipes:", error);
       Alert.alert("Error", "Failed to load recipes");
@@ -603,6 +652,181 @@ export default function HomeScreen() {
                     }
                     return null;
                   })()}
+
+                  {/* Like/Dislike Buttons */}
+                  <View style={styles.recipeActions}>
+                    <TouchableOpacity
+                      style={styles.likeButton}
+                      onPress={async (e) => {
+                        e.stopPropagation();
+                        if (!isAuthenticated || !user) {
+                          Alert.alert(
+                            "Authentication Required",
+                            "Please sign in to like recipes."
+                          );
+                          return;
+                        }
+                        const recipeId = recipe.id || (recipe as any)._id;
+                        const userId = user._id || (user as any)?.id;
+                        if (!recipeId || !userId) return;
+
+                        try {
+                          const newLike = await createOrUpdateLike({
+                            recipe_id: recipeId,
+                            user_id: userId,
+                            type: "like",
+                          });
+                          const counts = await getRecipeLikeCounts(recipeId);
+                          setRecipeLikes((prev) => ({
+                            ...prev,
+                            [recipeId]: {
+                              likes: counts.likes,
+                              dislikes: counts.dislikes,
+                              userLike: newLike, // null if removed, Like object if added/updated
+                            },
+                          }));
+
+                          // Create notification if like was added (not removed)
+                          if (newLike && newLike.type === "like") {
+                            const recipeOwnerId =
+                              recipe.user_id ||
+                              (recipe as any)?.user?._id ||
+                              (recipe as any)?.createdBy?._id;
+                            if (recipeOwnerId && recipeOwnerId !== userId) {
+                              try {
+                                await createNotification({
+                                  user_id: recipeOwnerId,
+                                  type: "like" as const,
+                                  title: "New Like on Your Recipe",
+                                  message:
+                                    recipe.title ||
+                                    recipe.name ||
+                                    "Untitled Recipe",
+                                  recipe_id: recipeId,
+                                  read: false,
+                                  liked_by: userId,
+                                  from_user_id: userId,
+                                });
+                              } catch (notificationError) {
+                                console.error(
+                                  "Error creating notification:",
+                                  notificationError
+                                );
+                              }
+                            }
+                          }
+                        } catch (error) {
+                          console.error("Error liking recipe:", error);
+                        }
+                      }}
+                    >
+                      <Ionicons
+                        name={
+                          recipeLikes[recipe.id || (recipe as any)._id]
+                            ?.userLike?.type === "like"
+                            ? "thumbs-up"
+                            : "thumbs-up-outline"
+                        }
+                        size={18}
+                        color={
+                          recipeLikes[recipe.id || (recipe as any)._id]
+                            ?.userLike?.type === "like"
+                            ? "#4CAF50"
+                            : "rgba(255, 255, 255, 0.7)"
+                        }
+                      />
+                      <ThemedText style={styles.likeCount}>
+                        {recipeLikes[recipe.id || (recipe as any)._id]?.likes ||
+                          0}
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.dislikeButton}
+                      onPress={async (e) => {
+                        e.stopPropagation();
+                        if (!isAuthenticated || !user) {
+                          Alert.alert(
+                            "Authentication Required",
+                            "Please sign in to dislike recipes."
+                          );
+                          return;
+                        }
+                        const recipeId = recipe.id || (recipe as any)._id;
+                        const userId = user._id || (user as any)?.id;
+                        if (!recipeId || !userId) return;
+
+                        try {
+                          const newLike = await createOrUpdateLike({
+                            recipe_id: recipeId,
+                            user_id: userId,
+                            type: "dislike",
+                          });
+                          const counts = await getRecipeLikeCounts(recipeId);
+                          setRecipeLikes((prev) => ({
+                            ...prev,
+                            [recipeId]: {
+                              likes: counts.likes,
+                              dislikes: counts.dislikes,
+                              userLike: newLike, // null if removed, Like object if added/updated
+                            },
+                          }));
+
+                          // Create notification if dislike was added (not removed)
+                          if (newLike && newLike.type === "dislike") {
+                            const recipeOwnerId =
+                              recipe.user_id ||
+                              (recipe as any)?.user?._id ||
+                              (recipe as any)?.createdBy?._id;
+                            if (recipeOwnerId && recipeOwnerId !== userId) {
+                              try {
+                                await createNotification({
+                                  user_id: recipeOwnerId,
+                                  type: "dislike" as const,
+                                  title: "New Dislike on Your Recipe",
+                                  message:
+                                    recipe.title ||
+                                    recipe.name ||
+                                    "Untitled Recipe",
+                                  recipe_id: recipeId,
+                                  read: false,
+                                  disliked_by: userId,
+                                  from_user_id: userId,
+                                });
+                              } catch (notificationError) {
+                                console.error(
+                                  "Error creating notification:",
+                                  notificationError
+                                );
+                              }
+                            }
+                          }
+                        } catch (error) {
+                          console.error("Error disliking recipe:", error);
+                        }
+                      }}
+                    >
+                      <Ionicons
+                        name={
+                          recipeLikes[recipe.id || (recipe as any)._id]
+                            ?.userLike?.type === "dislike"
+                            ? "thumbs-down"
+                            : "thumbs-down-outline"
+                        }
+                        size={18}
+                        color={
+                          recipeLikes[recipe.id || (recipe as any)._id]
+                            ?.userLike?.type === "dislike"
+                            ? "#ff4444"
+                            : "rgba(255, 255, 255, 0.7)"
+                        }
+                      />
+                      <ThemedText style={styles.dislikeCount}>
+                        {recipeLikes[recipe.id || (recipe as any)._id]
+                          ?.dislikes || 0}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </TouchableOpacity>
             ))
