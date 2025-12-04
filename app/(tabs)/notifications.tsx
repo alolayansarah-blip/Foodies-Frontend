@@ -2,15 +2,10 @@ import { PageSkeleton } from "@/components/skeleton";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { styles } from "@/styles/notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import {
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { styles } from "@/styles/notifications";
+import { Alert, ScrollView, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Mock notifications data
@@ -76,7 +71,7 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+      style={[styles.container, { backgroundColor: "#0d2818" }]}
       edges={["top", "bottom"]}
     >
       {/* Creative Background Elements */}

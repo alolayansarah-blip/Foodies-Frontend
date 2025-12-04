@@ -201,7 +201,7 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+      style={[styles.container, { backgroundColor: "#0d2818" }]}
       edges={["top", "bottom"]}
     >
       {/* Creative Background Elements */}
@@ -285,7 +285,11 @@ export default function SearchScreen() {
                 </ThemedText>
                 {searchResults.map((recipe, index) => (
                   <TouchableOpacity
-                    key={recipe.id || (recipe as any)._id || `search-result-${index}`}
+                    key={
+                      recipe.id ||
+                      (recipe as any)._id ||
+                      `search-result-${index}`
+                    }
                     style={styles.resultItem}
                     onPress={() => {
                       const recipeId = recipe.id || (recipe as any)._id;
@@ -405,7 +409,9 @@ export default function SearchScreen() {
                 <View style={styles.recipeGrid}>
                   {filteredRecipes.map((recipe, index) => (
                     <TouchableOpacity
-                      key={recipe.id || (recipe as any)._id || `recipe-${index}`}
+                      key={
+                        recipe.id || (recipe as any)._id || `recipe-${index}`
+                      }
                       style={styles.recipeCard}
                       onPress={() => {
                         const recipeId = recipe.id || (recipe as any)._id;
@@ -420,7 +426,10 @@ export default function SearchScreen() {
                           <View style={styles.recipeCategories}>
                             {Array.isArray(recipe.category) ? (
                               recipe.category.map((cat: any, index: number) => (
-                                <View key={index} style={styles.recipeCategoryTag}>
+                                <View
+                                  key={index}
+                                  style={styles.recipeCategoryTag}
+                                >
                                   <ThemedText style={styles.recipeCategoryText}>
                                     {cat.categoryName || cat.name || cat}
                                   </ThemedText>

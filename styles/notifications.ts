@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a4d2e", // Dark forest green
+    backgroundColor: "#0d2818", // Darker, richer green matching sign-in
     position: "relative",
   },
   backgroundElements: {
@@ -16,30 +16,30 @@ export const styles = StyleSheet.create({
   },
   circle1: {
     position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-    top: -50,
-    right: -50,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    top: -100,
+    right: -100,
   },
   circle2: {
     position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: "rgba(255, 255, 255, 0.02)",
-    bottom: 100,
-    left: -30,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(255, 255, 255, 0.015)",
+    bottom: 50,
+    left: -50,
   },
   circle3: {
     position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255, 255, 255, 0.025)",
-    top: "40%",
-    right: 20,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    top: "35%",
+    right: 30,
   },
   content: {
     flex: 1,
@@ -156,4 +156,3 @@ export const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.8)",
   },
 });
-

@@ -2,7 +2,12 @@ import { PageSkeleton } from "@/components/skeleton";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
-import { Category, createCategory, getCategories, getCategoryById } from "@/services/categories";
+import {
+  Category,
+  createCategory,
+  getCategories,
+  getCategoryById,
+} from "@/services/categories";
 import { getRecipes, Recipe } from "@/services/recipes";
 import { styles } from "@/styles/home";
 import { getImageUrl } from "@/utils/imageUtils";
@@ -124,7 +129,8 @@ export default function HomeScreen() {
       // If a specific category is selected (not "all"), filter by category_id
       if (selectedCategory !== "all") {
         const selectedCat = categories.find(
-          (cat) => cat.id === selectedCategory || (cat as any)._id === selectedCategory
+          (cat) =>
+            cat.id === selectedCategory || (cat as any)._id === selectedCategory
         );
         if (selectedCat && selectedCat.id !== "all") {
           // Use _id for backend filtering (ObjectId format)
@@ -146,15 +152,15 @@ export default function HomeScreen() {
       const toObjectIdString = (value: any): string => {
         if (!value) return "";
         // If it's already a string, return it
-        if (typeof value === 'string') return value;
+        if (typeof value === "string") return value;
         // If it has toString method, use it
-        if (value && typeof value.toString === 'function') {
+        if (value && typeof value.toString === "function") {
           const str = value.toString();
           // Check if it's not "[object Object]"
           if (str !== "[object Object]") return str;
         }
         // If it's an object with _id or id property
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === "object" && value !== null) {
           if (value._id) return toObjectIdString(value._id);
           if (value.id) return toObjectIdString(value.id);
         }
@@ -170,18 +176,26 @@ export default function HomeScreen() {
         let categoryData = null;
         const categoryIdRaw = recipe.category_id || recipe.categoryId || "";
         const categoryId = categoryIdRaw ? toObjectIdString(categoryIdRaw) : "";
-        
+
         // If category is populated (object), use it
-        if (recipe.category && typeof recipe.category === "object" && !Array.isArray(recipe.category)) {
+        if (
+          recipe.category &&
+          typeof recipe.category === "object" &&
+          !Array.isArray(recipe.category)
+        ) {
           categoryData = {
-            _id: toObjectIdString(recipe.category._id || recipe.category.id || categoryId),
+            _id: toObjectIdString(
+              recipe.category._id || recipe.category.id || categoryId
+            ),
             name: recipe.category.name || recipe.category.categoryName || "",
           };
         }
         // If category_id exists but category is not populated, fetch it from backend
         else if (categoryId) {
           try {
-            console.log(`Fetching category data from backend for category_id: ${categoryId}`);
+            console.log(
+              `Fetching category data from backend for category_id: ${categoryId}`
+            );
             const category = await getCategoryById(categoryId);
             categoryData = {
               _id: categoryId,
@@ -189,7 +203,10 @@ export default function HomeScreen() {
             };
             console.log(`Fetched category data from backend:`, categoryData);
           } catch (error) {
-            console.error(`Error fetching category ${categoryId} from backend:`, error);
+            console.error(
+              `Error fetching category ${categoryId} from backend:`,
+              error
+            );
             // If fetch fails, just store the ID
             categoryData = {
               _id: categoryId,
@@ -223,7 +240,7 @@ export default function HomeScreen() {
             recipe.updatedAt || recipe.createdAt || new Date().toISOString(),
         };
       });
-      
+
       const mappedRecipes = await Promise.all(mappedRecipesPromises);
       setRecipes(mappedRecipes);
     } catch (error: any) {
@@ -311,7 +328,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+      style={[styles.container, { backgroundColor: "#0d2818" }]}
       edges={["top", "bottom"]}
     >
       {/* Creative Background Elements */}
@@ -430,48 +447,67 @@ export default function HomeScreen() {
                   />
                 ) : (
                   <View style={styles.recipeImagePlaceholder}>
-                    <MaterialCommunityIcons name="food" size={40} color="rgba(255, 255, 255, 0.5)" />
+                    <MaterialCommunityIcons
+                      name="food"
+                      size={40}
+                      color="rgba(255, 255, 255, 0.5)"
+                    />
                   </View>
                 )}
-                
+
                 {/* Recipe Content */}
                 <View style={styles.recipeContent}>
                   {/* Recipe Title */}
                   <ThemedText style={styles.recipeName} numberOfLines={2}>
                     {recipe.title || recipe.name || "Untitled Recipe"}
                   </ThemedText>
-                  
+
                   {/* Description Summary */}
                   {recipe.description && (
-                    <ThemedText style={styles.recipeDescription} numberOfLines={3}>
+                    <ThemedText
+                      style={styles.recipeDescription}
+                      numberOfLines={3}
+                    >
                       {recipe.description.length > 120
                         ? `${recipe.description.substring(0, 120)}...`
                         : recipe.description}
                     </ThemedText>
                   )}
-                  
+
                   {/* Categories */}
                   {(() => {
                     let hasCategories = false;
                     let categoryElements = null;
 
-                    if (Array.isArray(recipe.category) && recipe.category.length > 0) {
+                    if (
+                      Array.isArray(recipe.category) &&
+                      recipe.category.length > 0
+                    ) {
                       hasCategories = true;
-                      categoryElements = recipe.category.map((cat: any, index: number) => {
-                        const categoryName = typeof cat === 'string' 
-                          ? cat 
-                          : (cat?.name || cat?.categoryName || "");
-                        if (!categoryName) return null;
-                        return (
-                          <View key={index} style={styles.recipeCategoryTag}>
-                            <ThemedText style={styles.recipeCategoryText}>
-                              {categoryName}
-                            </ThemedText>
-                          </View>
-                        );
-                      }).filter(Boolean);
-                    } else if (recipe.category && typeof recipe.category === "object") {
-                      const categoryName = recipe.category.name || recipe.category.categoryName || "";
+                      categoryElements = recipe.category
+                        .map((cat: any, index: number) => {
+                          const categoryName =
+                            typeof cat === "string"
+                              ? cat
+                              : cat?.name || cat?.categoryName || "";
+                          if (!categoryName) return null;
+                          return (
+                            <View key={index} style={styles.recipeCategoryTag}>
+                              <ThemedText style={styles.recipeCategoryText}>
+                                {categoryName}
+                              </ThemedText>
+                            </View>
+                          );
+                        })
+                        .filter(Boolean);
+                    } else if (
+                      recipe.category &&
+                      typeof recipe.category === "object"
+                    ) {
+                      const categoryName =
+                        recipe.category.name ||
+                        recipe.category.categoryName ||
+                        "";
                       if (categoryName) {
                         hasCategories = true;
                         categoryElements = (
@@ -482,7 +518,10 @@ export default function HomeScreen() {
                           </View>
                         );
                       }
-                    } else if (typeof recipe.category === "string" && recipe.category) {
+                    } else if (
+                      typeof recipe.category === "string" &&
+                      recipe.category
+                    ) {
                       hasCategories = true;
                       categoryElements = (
                         <View style={styles.recipeCategoryTag}>
@@ -647,48 +686,70 @@ export default function HomeScreen() {
                     />
                   ) : (
                     <View style={styles.allRecipesImagePlaceholder}>
-                      <MaterialCommunityIcons name="food" size={40} color="rgba(255, 255, 255, 0.5)" />
+                      <MaterialCommunityIcons
+                        name="food"
+                        size={40}
+                        color="rgba(255, 255, 255, 0.5)"
+                      />
                     </View>
                   )}
-                  
+
                   {/* Recipe Content */}
                   <View style={styles.allRecipesContent}>
                     {/* Recipe Title */}
                     <ThemedText style={styles.allRecipesName} numberOfLines={2}>
                       {recipe.title || recipe.name || "Untitled Recipe"}
                     </ThemedText>
-                    
+
                     {/* Description Summary */}
                     {recipe.description && (
-                      <ThemedText style={styles.allRecipesDescription} numberOfLines={2}>
+                      <ThemedText
+                        style={styles.allRecipesDescription}
+                        numberOfLines={2}
+                      >
                         {recipe.description.length > 100
                           ? `${recipe.description.substring(0, 100)}...`
                           : recipe.description}
                       </ThemedText>
                     )}
-                    
+
                     {/* Categories */}
                     {(() => {
                       let hasCategories = false;
                       let categoryElements = null;
 
-                      if (Array.isArray(recipe.category) && recipe.category.length > 0) {
+                      if (
+                        Array.isArray(recipe.category) &&
+                        recipe.category.length > 0
+                      ) {
                         hasCategories = true;
-                        categoryElements = recipe.category.map((cat: any, index: number) => {
-                          const categoryName = typeof cat === 'string' 
-                            ? cat 
-                            : (cat?.categoryName || cat?.name || "");
-                          if (!categoryName) return null;
-                          return (
-                            <View key={index} style={styles.recipeCategoryTag}>
-                              <ThemedText style={styles.recipeCategoryText}>
-                                {categoryName}
-                              </ThemedText>
-                            </View>
-                          );
-                        }).filter(Boolean);
-                      } else if (recipe.category && typeof recipe.category === "object") {
-                        const categoryName = recipe.category.name || recipe.category.categoryName || "";
+                        categoryElements = recipe.category
+                          .map((cat: any, index: number) => {
+                            const categoryName =
+                              typeof cat === "string"
+                                ? cat
+                                : cat?.categoryName || cat?.name || "";
+                            if (!categoryName) return null;
+                            return (
+                              <View
+                                key={index}
+                                style={styles.recipeCategoryTag}
+                              >
+                                <ThemedText style={styles.recipeCategoryText}>
+                                  {categoryName}
+                                </ThemedText>
+                              </View>
+                            );
+                          })
+                          .filter(Boolean);
+                      } else if (
+                        recipe.category &&
+                        typeof recipe.category === "object"
+                      ) {
+                        const categoryName =
+                          recipe.category.name ||
+                          recipe.category.categoryName ||
+                          "";
                         if (categoryName) {
                           hasCategories = true;
                           categoryElements = (
@@ -699,7 +760,10 @@ export default function HomeScreen() {
                             </View>
                           );
                         }
-                      } else if (typeof recipe.category === "string" && recipe.category) {
+                      } else if (
+                        typeof recipe.category === "string" &&
+                        recipe.category
+                      ) {
                         hasCategories = true;
                         categoryElements = (
                           <View style={styles.recipeCategoryTag}>

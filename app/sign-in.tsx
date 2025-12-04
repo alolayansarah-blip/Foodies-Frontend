@@ -2,6 +2,7 @@ import { PageSkeleton } from "@/components/skeleton";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { styles } from "@/styles/signIn";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router, useNavigation } from "expo-router";
@@ -15,7 +16,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { styles } from "@/styles/signIn";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -44,14 +44,12 @@ export default function HomeScreen() {
   const mushroom2Rotate = useSharedValue(0);
   const flowerY = useSharedValue(0);
   const flowerRotate = useSharedValue(0);
-  const lettuceY = useSharedValue(0);
-  const lettuceRotate = useSharedValue(0);
-  const garlicY = useSharedValue(0);
-  const garlicRotate = useSharedValue(0);
-  const tomatoY = useSharedValue(0);
-  const tomatoRotate = useSharedValue(0);
+  const plateY = useSharedValue(0);
+  const plateRotate = useSharedValue(0);
   const formOpacity = useSharedValue(0);
   const formTranslateY = useSharedValue(20);
+  const buttonShine = useSharedValue(0);
+  const logoTextRotate = useSharedValue(0);
 
   // Hide navigation bar
   useEffect(() => {
@@ -104,26 +102,10 @@ export default function HomeScreen() {
       true
     );
 
-    // Lettuce floating and rotating
-    lettuceY.value = withRepeat(withTiming(-8, { duration: 2800 }), -1, true);
-    lettuceRotate.value = withRepeat(
-      withTiming(-12, { duration: 4800 }),
-      -1,
-      true
-    );
-
-    // Garlic floating and rotating
-    garlicY.value = withRepeat(withTiming(-9, { duration: 3000 }), -1, true);
-    garlicRotate.value = withRepeat(
-      withTiming(10, { duration: 4200 }),
-      -1,
-      true
-    );
-
-    // Tomato floating and rotating
-    tomatoY.value = withRepeat(withTiming(-7, { duration: 2900 }), -1, true);
-    tomatoRotate.value = withRepeat(
-      withTiming(-15, { duration: 4600 }),
+    // Plate floating and rotating
+    plateY.value = withRepeat(withTiming(-8, { duration: 3100 }), -1, true);
+    plateRotate.value = withRepeat(
+      withTiming(12, { duration: 4700 }),
       -1,
       true
     );
@@ -131,6 +113,16 @@ export default function HomeScreen() {
     // Form fade in and slide up
     formOpacity.value = withDelay(300, withTiming(1, { duration: 600 }));
     formTranslateY.value = withDelay(300, withSpring(0, { damping: 15 }));
+
+    // Button shine animation
+    buttonShine.value = withRepeat(withTiming(1, { duration: 2000 }), -1, true);
+
+    // Logo text - no animation (static)
+    // logoTextRotate.value = withRepeat(
+    //   withTiming(360, { duration: 20000 }),
+    //   -1,
+    //   false
+    // );
   }, []);
 
   // Animated styles
@@ -148,24 +140,10 @@ export default function HomeScreen() {
     ],
   }));
 
-  const lettuceAnimatedStyle = useAnimatedStyle(() => ({
+  const plateAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateY: lettuceY.value },
-      { rotate: `${lettuceRotate.value}deg` },
-    ],
-  }));
-
-  const garlicAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: garlicY.value },
-      { rotate: `${garlicRotate.value}deg` },
-    ],
-  }));
-
-  const tomatoAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: tomatoY.value },
-      { rotate: `${tomatoRotate.value}deg` },
+      { translateY: plateY.value },
+      { rotate: `${plateRotate.value}deg` },
     ],
   }));
 
@@ -173,6 +151,18 @@ export default function HomeScreen() {
     opacity: formOpacity.value,
     transform: [{ translateY: formTranslateY.value }],
   }));
+
+  const buttonShineStyle = useAnimatedStyle(() => {
+    const progress = buttonShine.value;
+    return {
+      left: `${(progress - 1) * 200}%`,
+      opacity: progress > 0.5 ? (1 - progress) * 0.5 : progress * 0.5,
+    };
+  });
+
+  // const logoTextAnimatedStyle = useAnimatedStyle(() => ({
+  //   transform: [{ rotate: `${logoTextRotate.value}deg` }],
+  // }));
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -233,27 +223,11 @@ export default function HomeScreen() {
           />
         </Animated.View>
 
-        {/* Lettuce Decorative Element */}
-        <Animated.View style={[styles.lettuceContainer, lettuceAnimatedStyle]}>
+        {/* Plate Decorative Element */}
+        <Animated.View style={[styles.plateContainer, plateAnimatedStyle]}>
           <Image
-            source={require("@/assets/images/lettuce.png")}
-            style={styles.lettuce}
-            contentFit="contain"
-          />
-        </Animated.View>
-        {/* Garlic Decorative Element */}
-        <Animated.View style={[styles.garlicContainer, garlicAnimatedStyle]}>
-          <Image
-            source={require("@/assets/images/garlic.png")}
-            style={styles.garlic}
-            contentFit="contain"
-          />
-        </Animated.View>
-        {/* Tomato Decorative Element */}
-        <Animated.View style={[styles.tomatoContainer, tomatoAnimatedStyle]}>
-          <Image
-            source={require("@/assets/images/tomato.png")}
-            style={styles.tomato}
+            source={require("@/assets/images/platte.png")}
+            style={styles.plate}
             contentFit="contain"
           />
         </Animated.View>
@@ -288,13 +262,20 @@ export default function HomeScreen() {
               <View style={styles.welcomeLine} />
             </View>
 
+            {/* Static Text Under Welcome */}
+            <View style={styles.subtitleContainer}>
+              <ThemedText style={styles.subtitleText}>
+                dash through the dishes
+              </ThemedText>
+            </View>
+
             {/* Form Container */}
             <Animated.View style={[styles.formContainer, formAnimatedStyle]}>
               {/* Email Input */}
               <View style={styles.inputContainer}>
                 <View style={styles.inputLabelContainer}>
                   <MaterialCommunityIcons
-                    name="email-outline"
+                    name="silverware-fork-knife"
                     size={16}
                     color="rgba(255, 255, 255, 0.6)"
                   />
@@ -302,7 +283,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.inputWrapper}>
                   <Ionicons
-                    name="mail-outline"
+                    name="restaurant-outline"
                     size={22}
                     color="rgba(255, 255, 255, 0.8)"
                     style={styles.inputIcon}
@@ -327,7 +308,7 @@ export default function HomeScreen() {
               <View style={styles.inputContainer}>
                 <View style={styles.inputLabelContainer}>
                   <MaterialCommunityIcons
-                    name="lock-outline"
+                    name="chef-hat"
                     size={16}
                     color="rgba(255, 255, 255, 0.6)"
                   />
@@ -335,7 +316,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.inputWrapper}>
                   <Ionicons
-                    name="lock-closed-outline"
+                    name="fast-food-outline"
                     size={22}
                     color="rgba(255, 255, 255, 0.8)"
                     style={styles.inputIcon}
@@ -389,24 +370,23 @@ export default function HomeScreen() {
               {/* Sign In Button */}
               <TouchableOpacity
                 onPress={handleSignIn}
-                activeOpacity={0.85}
+                activeOpacity={0.9}
                 style={[
                   styles.primaryButton,
                   isSubmitting && styles.primaryButtonDisabled,
                 ]}
                 disabled={isSubmitting}
               >
+                <Animated.View
+                  style={[styles.buttonShineOverlay, buttonShineStyle]}
+                />
                 <View style={styles.buttonContent}>
                   <ThemedText style={styles.primaryButtonText}>
                     {isSubmitting ? "Signing In..." : "Sign In"}
                   </ThemedText>
                   {!isSubmitting && (
                     <View style={styles.buttonArrowContainer}>
-                      <Ionicons
-                        name="arrow-forward"
-                        size={18}
-                        color="#1a4d2e"
-                      />
+                      <Ionicons name="restaurant" size={18} color="#0d2818" />
                     </View>
                   )}
                 </View>

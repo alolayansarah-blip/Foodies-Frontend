@@ -18,17 +18,17 @@ export default function TabLayout() {
         headerShown: false, // Change from true to false
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: "rgba(26, 77, 46, 0.95)", // Dark forest green with slight transparency
-          borderTopWidth: 1,
-          borderTopColor: "rgba(255, 255, 255, 0.1)",
-          elevation: 10,
+          backgroundColor: "rgba(13, 40, 24, 0.95)", // Darker green matching sign-in
+          borderTopWidth: 1.5,
+          borderTopColor: "rgba(255, 255, 255, 0.15)",
+          elevation: 12,
           shadowColor: "#000",
           shadowOffset: {
             width: 0,
-            height: -2,
+            height: -4,
           },
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
           height: 70 + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 10),
           paddingTop: 10,

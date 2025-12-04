@@ -60,6 +60,13 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="recipe/[id]"
+                options={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: "transparent" },
+                }}
+              />
+              <Stack.Screen
                 name="modal"
                 options={{
                   presentation: "modal",

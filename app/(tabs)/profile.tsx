@@ -6,6 +6,7 @@ import { useRecipes } from "@/contexts/RecipesContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 import { getRecipes, Recipe } from "@/services/recipes";
 import { uploadProfileImage } from "@/services/users";
+import { styles } from "@/styles/profile";
 import { getImageUrl } from "@/utils/imageUtils";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -21,7 +22,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { styles } from "@/styles/profile";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -173,7 +173,7 @@ export default function ProfileScreen() {
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri;
         setProfileImage(imageUri);
-
+        
         // Upload image to backend as FormData
         if (user) {
           const userId = user.id || (user as any)?._id;
@@ -289,7 +289,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <SafeAreaView
-        style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+        style={[styles.container, { backgroundColor: "#0d2818" }]}
         edges={["top", "bottom"]}
       >
         <ProfileSkeleton />
@@ -299,7 +299,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+      style={[styles.container, { backgroundColor: "#0d2818" }]}
       edges={["top", "bottom"]}
     >
       {/* Creative Background Elements */}
@@ -326,10 +326,7 @@ export default function ProfileScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + 10 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Header */}
@@ -349,13 +346,13 @@ export default function ProfileScreen() {
                 ) : (
                   <Ionicons
                     name="person"
-                    size={60}
+                    size={70}
                     color="rgba(255, 255, 255, 0.7)"
                   />
                 )}
               </View>
               <View style={styles.editIconContainer}>
-                <Ionicons name="camera" size={16} color="#fff" />
+                <Ionicons name="camera" size={18} color="#fff" />
               </View>
             </View>
           </TouchableOpacity>

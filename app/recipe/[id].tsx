@@ -46,7 +46,7 @@ export default function RecipeDetailScreen() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       if (!recipeId) {
         throw new Error("Recipe ID is required");
       }
@@ -55,15 +55,15 @@ export default function RecipeDetailScreen() {
       const toObjectIdString = (value: any): string => {
         if (!value) return "";
         // If it's already a string, return it
-        if (typeof value === 'string') return value;
+        if (typeof value === "string") return value;
         // If it has toString method, use it
-        if (value && typeof value.toString === 'function') {
+        if (value && typeof value.toString === "function") {
           const str = value.toString();
           // Check if it's not "[object Object]"
           if (str !== "[object Object]") return str;
         }
         // If it's an object with _id or id property
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === "object" && value !== null) {
           if (value._id) return toObjectIdString(value._id);
           if (value.id) return toObjectIdString(value.id);
         }
@@ -72,13 +72,16 @@ export default function RecipeDetailScreen() {
 
       // Helper function to extract user data (async to fetch from users endpoint if needed)
       const extractUserData = async (recipeData: any) => {
-        console.log("Extracting user data from:", JSON.stringify(recipeData, null, 2));
-        
+        console.log(
+          "Extracting user data from:",
+          JSON.stringify(recipeData, null, 2)
+        );
+
         // Try nested user object first (MongoDB populated field)
         if (recipeData.user) {
           const user = recipeData.user;
           // Handle both object and string (ObjectId) cases
-          if (typeof user === 'object' && user !== null) {
+          if (typeof user === "object" && user !== null) {
             const userData = {
               _id:
                 toObjectIdString(user._id) ||
@@ -100,39 +103,61 @@ export default function RecipeDetailScreen() {
                 user.profile_picture ||
                 null,
             };
-            console.log("Extracted user data from nested user object:", userData);
+            console.log(
+              "Extracted user data from nested user object:",
+              userData
+            );
             return userData;
           }
         }
-        
+
         // Try top-level user fields (user_id is ObjectId reference)
         // If we have user_id but no populated user data, fetch from users endpoint
-        const userId = toObjectIdString(recipeData.user_id || recipeData.userId);
+        const userId = toObjectIdString(
+          recipeData.user_id || recipeData.userId
+        );
         if (userId) {
           // If we already have username in recipe data, use it
-          if (recipeData.userName || recipeData.username || recipeData.user_name) {
+          if (
+            recipeData.userName ||
+            recipeData.username ||
+            recipeData.user_name
+          ) {
             const userData = {
               _id: userId,
-              userName: recipeData.userName || recipeData.username || recipeData.user_name || "",
-              userProfilePicture: recipeData.userProfilePicture || recipeData.profileImage || null,
+              userName:
+                recipeData.userName ||
+                recipeData.username ||
+                recipeData.user_name ||
+                "",
+              userProfilePicture:
+                recipeData.userProfilePicture ||
+                recipeData.profileImage ||
+                null,
             };
             console.log("Extracted user data from top-level fields:", userData);
             return userData;
           }
-          
+
           // Otherwise, fetch from users endpoint
           try {
-            console.log(`Fetching user data from users endpoint for user_id: ${userId}`);
+            console.log(
+              `Fetching user data from users endpoint for user_id: ${userId}`
+            );
             const user = await getUserById(userId);
             const userData = {
               _id: userId,
               userName: user.userName || user.name || user.username || "",
-              userProfilePicture: user.userProfilePicture || user.profileImage || null,
+              userProfilePicture:
+                user.userProfilePicture || user.profileImage || null,
             };
             console.log("Fetched user data from users endpoint:", userData);
             return userData;
           } catch (error) {
-            console.error(`Error fetching user ${userId} from users endpoint:`, error);
+            console.error(
+              `Error fetching user ${userId} from users endpoint:`,
+              error
+            );
             // Return user data with just the ID if fetch fails
             return {
               _id: userId,
@@ -141,19 +166,24 @@ export default function RecipeDetailScreen() {
             };
           }
         }
-        
+
         // Try to find user data in any nested structure
         if (recipeData.createdBy) {
           const createdBy = recipeData.createdBy;
-          if (typeof createdBy === 'object' && createdBy !== null) {
+          if (typeof createdBy === "object" && createdBy !== null) {
             return {
               _id: toObjectIdString(createdBy._id || createdBy.id),
-              userName: createdBy.userName || createdBy.name || createdBy.username || "",
-              userProfilePicture: createdBy.userProfilePicture || createdBy.profileImage || null,
+              userName:
+                createdBy.userName ||
+                createdBy.name ||
+                createdBy.username ||
+                "",
+              userProfilePicture:
+                createdBy.userProfilePicture || createdBy.profileImage || null,
             };
           }
         }
-        
+
         console.log("No user data found in recipe data");
         return null;
       };
@@ -168,10 +198,10 @@ export default function RecipeDetailScreen() {
 
         // Ensure we have the actual recipe object (handle MongoDB _id)
         const actualRecipe = recipeData || {};
-        
+
         const userData = await extractUserData(actualRecipe);
         console.log("Extracted userData:", userData);
-        
+
         const imageUrl = getImageUrl(
           actualRecipe.image ||
             (actualRecipe as any).imageUrl ||
@@ -182,62 +212,101 @@ export default function RecipeDetailScreen() {
 
         // Map the response to RecipeType format
         // MongoDB uses _id, so prioritize _id over id
-        const mappedRecipeIdMain: string = toObjectIdString((actualRecipe as any)._id) || toObjectIdString(actualRecipe.id) || recipeId;
+        const mappedRecipeIdMain: string =
+          toObjectIdString((actualRecipe as any)._id) ||
+          toObjectIdString(actualRecipe.id) ||
+          recipeId;
 
         // Ensure user data is properly set
         const finalUserData = userData || {
-          _id: toObjectIdString((actualRecipe as any).user_id || (actualRecipe as any).userId),
-          userName: (actualRecipe as any).userName || (actualRecipe as any).username || "",
+          _id: toObjectIdString(
+            (actualRecipe as any).user_id || (actualRecipe as any).userId
+          ),
+          userName:
+            (actualRecipe as any).userName ||
+            (actualRecipe as any).username ||
+            "",
           userProfilePicture: null,
         };
-        
+
         console.log("Final user data being set:", finalUserData);
-        
+
         // Extract title and description (which is steps/directions)
-        const recipeTitle = actualRecipe.title || actualRecipe.name || actualRecipe.recipeName || "Untitled Recipe";
+        const recipeTitle =
+          actualRecipe.title ||
+          actualRecipe.name ||
+          actualRecipe.recipeName ||
+          "Untitled Recipe";
         const recipeDescription = actualRecipe.description || "";
-        
+
         // Handle category based on schema structure
         // Schema has category_id (ObjectId ref), category may be populated
         // Backend uses 'name' field, not 'categoryName'
         let categoryData: Array<{ _id: string; name: string }> = [];
-        const categoryIdRaw = actualRecipe.category_id || actualRecipe.categoryId || "";
+        const categoryIdRaw =
+          actualRecipe.category_id || actualRecipe.categoryId || "";
         const categoryId = categoryIdRaw ? toObjectIdString(categoryIdRaw) : "";
-        
+
         // If category is populated (object), use it
-        if (actualRecipe.category && typeof actualRecipe.category === "object" && !Array.isArray(actualRecipe.category)) {
-          categoryData = [{
-            _id: toObjectIdString(actualRecipe.category._id || actualRecipe.category.id || categoryId),
-            name: actualRecipe.category.name || actualRecipe.category.categoryName || "",
-          }];
+        if (
+          actualRecipe.category &&
+          typeof actualRecipe.category === "object" &&
+          !Array.isArray(actualRecipe.category)
+        ) {
+          categoryData = [
+            {
+              _id: toObjectIdString(
+                actualRecipe.category._id ||
+                  actualRecipe.category.id ||
+                  categoryId
+              ),
+              name:
+                actualRecipe.category.name ||
+                actualRecipe.category.categoryName ||
+                "",
+            },
+          ];
         }
         // If category_id exists but category is not populated, fetch it from backend
         else if (categoryId) {
           try {
-            console.log(`Fetching category data from backend for category_id: ${categoryId}`);
+            console.log(
+              `Fetching category data from backend for category_id: ${categoryId}`
+            );
             const category = await getCategoryById(categoryId);
-            categoryData = [{
-              _id: categoryId,
-              name: category.name || category.categoryName || "",
-            }];
+            categoryData = [
+              {
+                _id: categoryId,
+                name: category.name || category.categoryName || "",
+              },
+            ];
             console.log(`Fetched category data from backend:`, categoryData);
           } catch (error) {
-            console.error(`Error fetching category ${categoryId} from backend:`, error);
+            console.error(
+              `Error fetching category ${categoryId} from backend:`,
+              error
+            );
             // If fetch fails, just store the ID
-            categoryData = [{
-              _id: categoryId,
-              name: "",
-            }];
+            categoryData = [
+              {
+                _id: categoryId,
+                name: "",
+              },
+            ];
           }
         }
-        
+
         const mappedRecipe: RecipeType = {
           id: mappedRecipeIdMain,
           title: recipeTitle,
           date:
-            actualRecipe.date || actualRecipe.createdAt || new Date().toISOString(),
+            actualRecipe.date ||
+            actualRecipe.createdAt ||
+            new Date().toISOString(),
           createdAt:
-            actualRecipe.createdAt || actualRecipe.date || new Date().toISOString(),
+            actualRecipe.createdAt ||
+            actualRecipe.date ||
+            new Date().toISOString(),
           updatedAt:
             actualRecipe.updatedAt ||
             actualRecipe.createdAt ||
@@ -251,11 +320,13 @@ export default function RecipeDetailScreen() {
           category: categoryData,
         };
         setRecipe(mappedRecipe);
-        
+
         // Fetch recipe ingredients
         const recipeIdForIngredients: string = mappedRecipeIdMain;
         try {
-          const ingredients = await getIngredientsByRecipe(recipeIdForIngredients);
+          const ingredients = await getIngredientsByRecipe(
+            recipeIdForIngredients
+          );
           setRecipeIngredients(Array.isArray(ingredients) ? ingredients : []);
         } catch (ingredientError) {
           console.error("Error fetching recipe ingredients:", ingredientError);
@@ -264,26 +335,29 @@ export default function RecipeDetailScreen() {
       } catch (serviceError) {
         console.log("Service error, trying direct API call:", serviceError);
         // Fallback to direct API call
-        const response = await fetch(`${config.API_BASE_URL}/api/recipes/${recipeId}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await fetch(
+          `${config.API_BASE_URL}/api/recipes/${recipeId}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (response.ok) {
           const data = await response.json();
           console.log("Direct API response:", JSON.stringify(data, null, 2));
-          
+
           // Handle different response structures
           const recipeData = data.data || data;
-          
+
           // Ensure we have the actual recipe object
           const actualRecipe = recipeData || {};
 
           const userData = await extractUserData(actualRecipe);
           console.log("Extracted userData (fallback):", userData);
-          
+
           const imageUrl = getImageUrl(
             actualRecipe.image ||
               (actualRecipe as any).imageUrl ||
@@ -293,52 +367,87 @@ export default function RecipeDetailScreen() {
           );
 
           // MongoDB uses _id, so prioritize _id over id
-          const mappedRecipeIdFallback: string = (actualRecipe as any)._id || actualRecipe.id || recipeId;
+          const mappedRecipeIdFallback: string =
+            (actualRecipe as any)._id || actualRecipe.id || recipeId;
 
           // Ensure user data is properly set (reuse toObjectIdString from outer scope)
           const finalUserData = userData || {
-            _id: toObjectIdString((actualRecipe as any).user_id || (actualRecipe as any).userId),
-            userName: (actualRecipe as any).userName || (actualRecipe as any).username || "",
+            _id: toObjectIdString(
+              (actualRecipe as any).user_id || (actualRecipe as any).userId
+            ),
+            userName:
+              (actualRecipe as any).userName ||
+              (actualRecipe as any).username ||
+              "",
             userProfilePicture: null,
           };
-          
+
           console.log("Final user data being set (fallback):", finalUserData);
 
           // Extract title and description (which is steps/directions)
-          const recipeTitle = actualRecipe.title || actualRecipe.name || actualRecipe.recipeName || "Untitled Recipe";
+          const recipeTitle =
+            actualRecipe.title ||
+            actualRecipe.name ||
+            actualRecipe.recipeName ||
+            "Untitled Recipe";
           const recipeDescription = actualRecipe.description || "";
 
           // Handle category based on schema structure
           // Schema has category_id (ObjectId ref), category may be populated
           // Backend uses 'name' field, not 'categoryName'
           let categoryData: Array<{ _id: string; name: string }> = [];
-          const categoryIdRaw = actualRecipe.category_id || actualRecipe.categoryId || "";
-          const categoryId = categoryIdRaw ? toObjectIdString(categoryIdRaw) : "";
-          
+          const categoryIdRaw =
+            actualRecipe.category_id || actualRecipe.categoryId || "";
+          const categoryId = categoryIdRaw
+            ? toObjectIdString(categoryIdRaw)
+            : "";
+
           // If category is populated (object), use it
-          if (actualRecipe.category && typeof actualRecipe.category === "object" && !Array.isArray(actualRecipe.category)) {
-            categoryData = [{
-              _id: toObjectIdString(actualRecipe.category._id || actualRecipe.category.id || categoryId),
-              name: actualRecipe.category.name || actualRecipe.category.categoryName || "",
-            }];
+          if (
+            actualRecipe.category &&
+            typeof actualRecipe.category === "object" &&
+            !Array.isArray(actualRecipe.category)
+          ) {
+            categoryData = [
+              {
+                _id: toObjectIdString(
+                  actualRecipe.category._id ||
+                    actualRecipe.category.id ||
+                    categoryId
+                ),
+                name:
+                  actualRecipe.category.name ||
+                  actualRecipe.category.categoryName ||
+                  "",
+              },
+            ];
           }
           // If category_id exists but category is not populated, fetch it from backend
           else if (categoryId) {
             try {
-              console.log(`Fetching category data from backend for category_id: ${categoryId}`);
+              console.log(
+                `Fetching category data from backend for category_id: ${categoryId}`
+              );
               const category = await getCategoryById(categoryId);
-              categoryData = [{
-                _id: categoryId,
-                name: category.name || category.categoryName || "",
-              }];
+              categoryData = [
+                {
+                  _id: categoryId,
+                  name: category.name || category.categoryName || "",
+                },
+              ];
               console.log(`Fetched category data from backend:`, categoryData);
             } catch (error) {
-              console.error(`Error fetching category ${categoryId} from backend:`, error);
+              console.error(
+                `Error fetching category ${categoryId} from backend:`,
+                error
+              );
               // If fetch fails, just store the ID
-              categoryData = [{
-                _id: categoryId,
-                name: "",
-              }];
+              categoryData = [
+                {
+                  _id: categoryId,
+                  name: "",
+                },
+              ];
             }
           }
 
@@ -366,14 +475,19 @@ export default function RecipeDetailScreen() {
             category: categoryData,
           };
           setRecipe(mappedRecipe);
-          
+
           // Fetch recipe ingredients
           const recipeIdForIngredientsFallback: string = mappedRecipeIdFallback;
           try {
-            const ingredients = await getIngredientsByRecipe(recipeIdForIngredientsFallback);
+            const ingredients = await getIngredientsByRecipe(
+              recipeIdForIngredientsFallback
+            );
             setRecipeIngredients(Array.isArray(ingredients) ? ingredients : []);
           } catch (ingredientError) {
-            console.error("Error fetching recipe ingredients:", ingredientError);
+            console.error(
+              "Error fetching recipe ingredients:",
+              ingredientError
+            );
             setRecipeIngredients([]);
           }
         } else {
@@ -406,7 +520,7 @@ export default function RecipeDetailScreen() {
     return (
       <View style={styles.container}>
         <SafeAreaView
-          style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+          style={[styles.container, { backgroundColor: "#0d2818" }]}
           edges={["top", "bottom"]}
         >
           <View style={styles.loadingContainer}>
@@ -424,7 +538,7 @@ export default function RecipeDetailScreen() {
     return (
       <View style={styles.container}>
         <SafeAreaView
-          style={[styles.container, { backgroundColor: "#1a4d2e" }]}
+          style={[styles.container, { backgroundColor: "#0d2818" }]}
           edges={["top", "bottom"]}
         >
           <View style={styles.errorContainer}>
@@ -435,7 +549,7 @@ export default function RecipeDetailScreen() {
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <ThemedText style={styles.backButtonText}>Go Back</ThemedText>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -455,10 +569,7 @@ export default function RecipeDetailScreen() {
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: insets.top + 10 },
-          ]}
+          contentContainerStyle={styles.scrollContent}
         >
           {/* Header with back button */}
           <View style={styles.header}>
@@ -481,7 +592,11 @@ export default function RecipeDetailScreen() {
               />
             ) : (
               <View style={styles.recipeImagePlaceholder}>
-                <MaterialCommunityIcons name="food" size={60} color="rgba(255, 255, 255, 0.5)" />
+                <MaterialCommunityIcons
+                  name="food"
+                  size={60}
+                  color="rgba(255, 255, 255, 0.5)"
+                />
               </View>
             )}
 
@@ -514,15 +629,20 @@ export default function RecipeDetailScreen() {
                 <ThemedText style={styles.sectionTitle}>Ingredients</ThemedText>
                 <View style={styles.ingredientsContainer}>
                   {recipeIngredients.map((recipeIngredient, index) => {
-                    const ingredient = recipeIngredient.ingredient || recipeIngredient;
-                    const ingredientName = 
-                      ingredient?.name || 
-                      ingredient?.ingredientName || 
+                    const ingredient =
+                      recipeIngredient.ingredient || recipeIngredient;
+                    const ingredientName =
+                      ingredient?.name ||
+                      ingredient?.ingredientName ||
                       recipeIngredient?.name ||
                       "Unknown Ingredient";
                     return (
                       <View key={index} style={styles.ingredientItem}>
-                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={20}
+                          color="#fff"
+                        />
                         <ThemedText style={styles.ingredientText}>
                           {ingredientName}
                         </ThemedText>
@@ -535,7 +655,9 @@ export default function RecipeDetailScreen() {
 
             {/* Steps / Directions */}
             <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Steps / Directions</ThemedText>
+              <ThemedText style={styles.sectionTitle}>
+                Steps / Directions
+              </ThemedText>
               <View style={styles.stepsWrapper}>
                 <ThemedText style={styles.stepsText}>
                   {recipe.description || "No steps available."}
@@ -548,4 +670,3 @@ export default function RecipeDetailScreen() {
     </View>
   );
 }
-
