@@ -2,8 +2,11 @@ import { SearchSkeleton } from "@/components/skeleton";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
+import { Category, getCategories } from "@/services/categories";
+import { getRecipes, Recipe } from "@/services/recipes";
 import { styles } from "@/styles/search";
-import { Ionicons } from "@expo/vector-icons";
+import { getImageUrl } from "@/utils/imageUtils";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -23,29 +26,44 @@ import {
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL || "https://your-api-url.com";
 
-interface Recipe {
-  id: string;
-  name?: string;
-  title?: string;
-  category?:
-    | string
-    | string[]
-    | Array<{ _id?: string; categoryName?: string; name?: string }>
-    | { _id?: string; categoryName?: string; name?: string };
-  category_id?: string;
-  image?: string | null;
-  rating?: number;
-  description?: string;
-}
+// Default "All" category (not stored in backend)
+const ALL_CATEGORY = { id: "all", name: "All", icon: "apps" };
 
-type CategoryType = "All" | "Recipes" | "Ingredients" | "Categories";
+// Get category icon based on name
+const getCategoryIcon = (categoryName: string): string => {
+  const name = categoryName.toLowerCase();
+  if (name.includes("dessert")) {
+    return "cupcake";
+  }
+  if (name.includes("pizza")) {
+    return "pizza";
+  }
+  if (name.includes("coffee")) {
+    return "coffee";
+  }
+  if (name.includes("salad")) {
+    return "leaf";
+  }
+  if (name.includes("bowl")) {
+    return "bowl-mix";
+  }
+  if (name.includes("sandwich")) {
+    return "hamburger";
+  }
+  if (name.includes("healthy")) {
+    return "sprout";
+  }
+  return "food";
+};
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Recipe[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [categories, setCategories] = useState<Category[]>([ALL_CATEGORY]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<CategoryType>("All");
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const isNavigationLoading = useNavigationLoading();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -59,40 +77,46 @@ export default function SearchScreen() {
     }
   };
 
-  const categories: CategoryType[] = [
-    "All",
-    "Recipes",
-    "Ingredients",
-    "Categories",
-  ];
+  // Fetch categories
+  const fetchCategories = async () => {
+    try {
+      setIsLoadingCategories(true);
+      const apiCategories = await getCategories();
+
+      if (!Array.isArray(apiCategories)) {
+        console.error("Categories response is not an array:", apiCategories);
+        setCategories([ALL_CATEGORY]);
+        return;
+      }
+
+      const mappedCategories = apiCategories.map((cat) => {
+        const categoryName = cat.name || cat.categoryName || "";
+        return {
+          ...cat,
+          _id: cat._id || cat.id,
+          id: cat._id || cat.id || String(Date.now() + Math.random()),
+          name: categoryName,
+          icon: getCategoryIcon(categoryName),
+        };
+      });
+      setCategories([ALL_CATEGORY, ...mappedCategories]);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setCategories([ALL_CATEGORY]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
 
   // Fetch recipes from backend
   useEffect(() => {
     const fetchRecipes = async () => {
       setIsLoadingRecipes(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/recipes`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          // Handle different response formats
-          const recipesData = Array.isArray(data)
-            ? data
-            : data.recipes || data.data || [];
-          setRecipes(recipesData);
-        } else {
-          console.error("Failed to fetch recipes:", response.status);
-          // Set empty array on error
-          setRecipes([]);
-        }
+        const recipesData = await getRecipes();
+        setRecipes(recipesData);
       } catch (error) {
         console.error("Error fetching recipes:", error);
-        // Set empty array on error
         setRecipes([]);
       } finally {
         setIsLoadingRecipes(false);
@@ -100,6 +124,7 @@ export default function SearchScreen() {
     };
 
     fetchRecipes();
+    fetchCategories();
   }, []);
 
   const handleSearch = (query: string) => {
@@ -143,47 +168,18 @@ export default function SearchScreen() {
     setSearchResults([]);
   };
 
-  // Filter recipes based on active category
+  // Filter recipes based on selected category
   const getFilteredRecipes = () => {
-    if (activeCategory === "All") {
+    if (selectedCategory === "all") {
       return recipes;
     }
 
     return recipes.filter((recipe) => {
-      switch (activeCategory) {
-        case "Recipes":
-          // Show all recipes (same as All)
-          return true;
-
-        case "Ingredients":
-          // For now, show all recipes
-          // In the future, this could filter by ingredients if ingredient data is available
-          return true;
-
-        case "Categories":
-          // Filter recipes that have categories
-          if (recipe.category) {
-            if (Array.isArray(recipe.category) && recipe.category.length > 0) {
-              return true;
-            }
-            if (
-              typeof recipe.category === "object" &&
-              recipe.category !== null
-            ) {
-              return true;
-            }
-            if (
-              typeof recipe.category === "string" &&
-              recipe.category.trim() !== ""
-            ) {
-              return true;
-            }
-          }
-          return false;
-
-        default:
-          return true;
-      }
+      const recipeCategoryId =
+        recipe.category_id ||
+        (recipe.category as any)?._id ||
+        (recipe.category as any)?.id;
+      return recipeCategoryId === selectedCategory;
     });
   };
 
@@ -346,33 +342,61 @@ export default function SearchScreen() {
         ) : (
           /* Explore Grid View */
           <View style={styles.exploreContainer}>
-            {/* Category Tabs */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoryScroll}
-              contentContainerStyle={styles.categoryContainer}
-            >
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  onPress={() => setActiveCategory(category)}
-                  style={[
-                    styles.categoryTab,
-                    activeCategory === category && styles.activeCategoryTab,
-                  ]}
-                >
-                  <ThemedText
-                    style={[
-                      styles.categoryText,
-                      activeCategory === category && styles.activeCategoryText,
-                    ]}
-                  >
-                    {category}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            {/* Categories Section */}
+            <View style={styles.categoriesSection}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoriesContainer}
+              >
+                {isLoadingCategories ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  categories.map((category) => {
+                    const categoryName =
+                      category.name || category.categoryName || "";
+                    const isActive = selectedCategory === category.id;
+
+                    return (
+                      <TouchableOpacity
+                        key={category.id}
+                        style={[
+                          styles.categoryChip,
+                          isActive && styles.categoryChipActive,
+                        ]}
+                        onPress={() => setSelectedCategory(category.id)}
+                        activeOpacity={0.8}
+                      >
+                        {isActive && <View style={styles.categoryActiveGlow} />}
+                        <View
+                          style={[
+                            styles.categoryIconContainer,
+                            isActive && styles.categoryIconContainerActive,
+                          ]}
+                        >
+                          <MaterialCommunityIcons
+                            name={(category.icon || "food") as any}
+                            size={32}
+                            color={
+                              isActive ? "#0d2818" : "rgba(255, 255, 255, 0.9)"
+                            }
+                          />
+                        </View>
+                        <ThemedText
+                          style={[
+                            styles.categoryText,
+                            isActive && styles.categoryTextActive,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {categoryName}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </ScrollView>
+            </View>
 
             {/* Recipe Grid */}
             <ScrollView
@@ -398,59 +422,58 @@ export default function SearchScreen() {
                     No recipes found
                   </ThemedText>
                   <ThemedText style={styles.emptySubtext}>
-                    {activeCategory === "Categories"
-                      ? "No recipes with categories found"
-                      : activeCategory === "Ingredients"
-                      ? "No recipes with ingredients found"
-                      : "Recipes will appear here once they're posted"}
+                    {selectedCategory === "all"
+                      ? "Recipes will appear here once they're posted"
+                      : "No recipes found in this category"}
                   </ThemedText>
                 </View>
               ) : (
                 <View style={styles.recipeGrid}>
-                  {filteredRecipes.map((recipe, index) => (
-                    <TouchableOpacity
-                      key={
-                        recipe.id || (recipe as any)._id || `recipe-${index}`
-                      }
-                      style={styles.recipeCard}
-                      onPress={() => {
-                        const recipeId = recipe.id || (recipe as any)._id;
-                        if (recipeId) {
-                          router.push(`/recipe/${recipeId}` as any);
-                        }
-                      }}
-                    >
-                      <View style={styles.recipeContent}>
-                        {/* Categories */}
-                        {recipe.category && (
-                          <View style={styles.recipeCategories}>
-                            {Array.isArray(recipe.category) ? (
-                              recipe.category.map((cat: any, index: number) => (
-                                <View
-                                  key={index}
-                                  style={styles.recipeCategoryTag}
-                                >
-                                  <ThemedText style={styles.recipeCategoryText}>
-                                    {cat.categoryName || cat.name || cat}
-                                  </ThemedText>
-                                </View>
-                              ))
-                            ) : (
-                              <View style={styles.recipeCategoryTag}>
-                                <ThemedText style={styles.recipeCategoryText}>
-                                  {typeof recipe.category === "string"
-                                    ? recipe.category
-                                    : (recipe.category as any)?.categoryName ||
-                                      (recipe.category as any)?.name ||
-                                      "Uncategorized"}
-                                </ThemedText>
-                              </View>
-                            )}
+                  {filteredRecipes.map((recipe, index) => {
+                    const recipeId = recipe.id || (recipe as any)._id;
+                    const recipeImage = recipe.image
+                      ? getImageUrl(recipe.image)
+                      : null;
+                    const recipeName =
+                      recipe.title || recipe.name || "Untitled Recipe";
+
+                    return (
+                      <TouchableOpacity
+                        key={recipeId || `recipe-${index}`}
+                        style={styles.recipeCard}
+                        onPress={() => {
+                          if (recipeId) {
+                            router.push(`/recipe/${recipeId}` as any);
+                          }
+                        }}
+                        activeOpacity={0.9}
+                      >
+                        {recipeImage ? (
+                          <Image
+                            source={{ uri: recipeImage }}
+                            style={styles.recipeImage}
+                            contentFit="cover"
+                          />
+                        ) : (
+                          <View style={styles.recipeImagePlaceholder}>
+                            <MaterialCommunityIcons
+                              name="food"
+                              size={40}
+                              color="rgba(255, 255, 255, 0.5)"
+                            />
                           </View>
                         )}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                        <View style={styles.recipeOverlay}>
+                          <ThemedText
+                            style={styles.recipeCardName}
+                            numberOfLines={2}
+                          >
+                            {recipeName}
+                          </ThemedText>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
             </ScrollView>
