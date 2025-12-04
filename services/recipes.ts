@@ -167,7 +167,35 @@ export const updateRecipe = async (id: string, data: Partial<Recipe>): Promise<R
 
 // Delete recipe
 export const deleteRecipe = async (id: string): Promise<void> => {
-  await api.delete(`/api/recipes/${id}`);
+  try {
+    const response = await api.delete(`/api/recipes/${id}`);
+    console.log('Delete recipe response:', response.data);
+    
+    // Backend returns { success: true, message: "Recipe deleted successfully" }
+    if (response.data && response.data.success !== undefined) {
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to delete recipe');
+      }
+    }
+    
+    return;
+  } catch (error: any) {
+    console.error('Error in deleteRecipe service:', error);
+    // Re-throw with more context
+    if (error.response) {
+      // Server responded with error status
+      const errorMessage = error.response.data?.message ||
+                          error.response.data?.error ||
+                          `Server error: ${error.response.status}`;
+      throw new Error(errorMessage);
+    } else if (error.request) {
+      // Request was made but no response received
+      throw new Error('Network error: No response from server');
+    } else {
+      // Something else happened
+      throw new Error(error.message || 'Failed to delete recipe');
+    }
+  }
 };
 
 // Upload recipe image
