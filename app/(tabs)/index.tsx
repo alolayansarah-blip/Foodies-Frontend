@@ -118,13 +118,43 @@ export default function HomeScreen() {
 
       // Map API categories and add icon field (using first letter or default)
       // Backend uses _id, preserve it for filtering
-      const mappedCategories = apiCategories.map((cat) => ({
-        ...cat,
-        _id: cat._id || cat.id, // Preserve original _id
-        id: cat._id || cat.id || String(Date.now() + Math.random()), // Use _id as id for consistency
-        name: cat.name || cat.categoryName || "",
-        icon: "food", // Default icon, can be enhanced later
-      }));
+      const getCategoryIcon = (categoryName: string): string => {
+        const name = categoryName.toLowerCase();
+        if (name.includes("dessert")) {
+          return "cupcake";
+        }
+        if (name.includes("pizza")) {
+          return "pizza";
+        }
+        if (name.includes("coffee")) {
+          return "coffee";
+        }
+        if (name.includes("salad")) {
+          return "leaf";
+        }
+        if (name.includes("bowl")) {
+          return "bowl-mix";
+        }
+        if (name.includes("sandwich")) {
+          return "hamburger";
+        }
+        if (name.includes("healthy")) {
+          return "sprout";
+        }
+        // Default icon
+        return "food";
+      };
+
+      const mappedCategories = apiCategories.map((cat) => {
+        const categoryName = cat.name || cat.categoryName || "";
+        return {
+          ...cat,
+          _id: cat._id || cat.id, // Preserve original _id
+          id: cat._id || cat.id || String(Date.now() + Math.random()), // Use _id as id for consistency
+          name: categoryName,
+          icon: getCategoryIcon(categoryName),
+        };
+      });
       setCategories([ALL_CATEGORY, ...mappedCategories]);
     } catch (error: any) {
       console.error("Error fetching categories:", error);
