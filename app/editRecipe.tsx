@@ -1,7 +1,13 @@
 import { ThemedText } from "@/components/themed-text";
+import { config } from "@/constants/config";
 import { useAuth } from "@/contexts/AuthContext";
 import { Category, getCategories } from "@/services/categories";
-import { createRecipeIngredient } from "@/services/recipeIngredients";
+import {
+  createRecipeIngredient,
+  deleteRecipeIngredient,
+  getIngredientsByRecipe,
+} from "@/services/recipeIngredients";
+import { getRecipeById, updateRecipe } from "@/services/recipes";
 import { styles } from "@/styles/create";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -79,27 +85,47 @@ export default function EditRecipeScreen() {
       setIsLoadingIngredients(true);
 
       try {
-        // Fetch recipe details
-        const recipeResponse = await fetch(
-          `${process.env.EXPO_PUBLIC_API_URL}/recipes/${recipeId}`
-        );
-        const recipeData = await recipeResponse.json();
+        // Fetch recipe details using the service function
+        const recipeData = await getRecipeById(recipeId);
 
         if (!recipeData) {
           throw new Error("Recipe not found");
         }
 
-        // Check if user owns this recipe
-        const recipeUserId = recipeData.user_id || (recipeData as any)?.user_id;
-        const currentUserId = user?.id || (user as any)?._id;
+        // Helper function to extract user ID from recipe
+        const extractRecipeUserId = (recipe: any): string | null => {
+          // Try user_id field - could be string, ObjectId, or populated object
+          if (recipe.user_id) {
+            if (typeof recipe.user_id === "object" && recipe.user_id !== null) {
+              const userIdObj = recipe.user_id;
+              if (userIdObj._id) return String(userIdObj._id);
+              if (userIdObj.id) return String(userIdObj.id);
+            }
+            return String(recipe.user_id);
+          }
+          if (recipe.user?._id) return String(recipe.user._id);
+          if (recipe.user?.id) return String(recipe.user.id);
+          if (recipe.createdBy?._id) return String(recipe.createdBy._id);
+          if (recipe.createdBy?.id) return String(recipe.createdBy.id);
+          return null;
+        };
 
-        if (recipeUserId !== currentUserId) {
+        // Check if user owns this recipe
+        const recipeUserId = extractRecipeUserId(recipeData);
+        const currentUserId = user?.id || (user as any)?._id;
+        const currentUserIdStr = currentUserId ? String(currentUserId) : null;
+
+        if (
+          !recipeUserId ||
+          !currentUserIdStr ||
+          recipeUserId !== currentUserIdStr
+        ) {
           Alert.alert("Error", "You don't have permission to edit this recipe");
           router.back();
           return;
         }
 
-        setOriginalRecipe(recipeData);
+        setOriginalRecipe(recipeData as any);
         setRecipeTitle(recipeData.title || "");
         setRecipeImage(recipeData.image || null);
         setOriginalImage(recipeData.image || null);
@@ -108,25 +134,31 @@ export default function EditRecipeScreen() {
         );
         setRecipeDescription(recipeData.description || "");
 
-        // Fetch recipe ingredients
-        const recipeIngredientsResponse = await fetch(
-          `${process.env.EXPO_PUBLIC_API_URL}/recipe-ingredients?recipe_id=${recipeId}`
-        );
-        const recipeIngredientsData = await recipeIngredientsResponse.json();
+        // Fetch recipe ingredients using service
+        const recipeIngredientsData = await getIngredientsByRecipe(recipeId);
 
         const ingredientIds = Array.isArray(recipeIngredientsData)
-          ? recipeIngredientsData.map(
-              (ri: RecipeIngredient) => ri.ingredient_id
-            )
+          ? recipeIngredientsData.map((ri: any) => {
+              const ingredient = ri.ingredient || ri;
+              return ingredient?.id || ingredient?._id || ri.ingredient_id;
+            })
           : [];
         setSelectedIngredientIds(ingredientIds);
 
         // Fetch categories and ingredients
         const [categoriesData, ingredientsData] = await Promise.all([
           getCategories(),
-          fetch(`${process.env.EXPO_PUBLIC_API_URL}/ingredients`).then((res) =>
-            res.json()
-          ),
+          fetch(`${config.API_BASE_URL}/api/ingredients`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }).then((res) => {
+            if (!res.ok) {
+              throw new Error("Failed to fetch ingredients");
+            }
+            return res.json();
+          }),
         ]);
 
         setCategories(categoriesData || []);
@@ -269,10 +301,14 @@ export default function EditRecipeScreen() {
     setIsSubmitting(true);
     try {
       const userId = user.id || (user as any)?._id;
-      let finalImageUrl = recipeImage;
+      let finalImageUrl: string = recipeImage || "";
 
       // Upload new image if it changed
-      if (recipeImage !== originalImage && recipeImage.startsWith("file://")) {
+      if (
+        recipeImage &&
+        recipeImage !== originalImage &&
+        recipeImage.startsWith("file://")
+      ) {
         try {
           const uploadedImageUrl = await uploadImage(recipeImage);
           if (uploadedImageUrl) {
@@ -284,48 +320,30 @@ export default function EditRecipeScreen() {
             "Warning",
             "Failed to upload new image. Using previous image."
           );
-          finalImageUrl = originalImage;
+          finalImageUrl = originalImage || "";
         }
       }
 
-      // Update recipe
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/recipes/${recipeId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: recipeTitle,
-            description: recipeDescription,
-            image: finalImageUrl,
-            user_id: userId,
-            category_id: recipeCategoryId,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update recipe");
-      }
+      // Update recipe using service function
+      await updateRecipe(recipeId, {
+        title: recipeTitle,
+        description: recipeDescription,
+        image: finalImageUrl || undefined,
+        user_id: userId,
+        category_id: recipeCategoryId,
+      });
 
       // Delete existing recipe-ingredient relationships
       try {
-        const existingIngredientsResponse = await fetch(
-          `${process.env.EXPO_PUBLIC_API_URL}/recipe-ingredients?recipe_id=${recipeId}`
-        );
-        const existingIngredients = await existingIngredientsResponse.json();
+        const existingIngredients = await getIngredientsByRecipe(recipeId);
 
         if (Array.isArray(existingIngredients)) {
           for (const ri of existingIngredients) {
-            const riId = ri.id || (ri as any)._id;
-            await fetch(
-              `${process.env.EXPO_PUBLIC_API_URL}/recipe-ingredients/${riId}`,
-              {
-                method: "DELETE",
-              }
-            );
+            const riId =
+              ri.id || (ri as any)._id || (ri as any).recipeIngredientId;
+            if (riId) {
+              await deleteRecipeIngredient(riId);
+            }
           }
         }
       } catch (error) {

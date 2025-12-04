@@ -77,12 +77,33 @@ export default function DeleteRecipeScreen() {
 
       // Helper function to extract user ID from recipe in various formats
       const extractRecipeUserId = (recipe: Recipe): string | null => {
-        // Try user_id field (string or ObjectId)
+        // Try user_id field - could be string, ObjectId, or populated object
         if (recipe.user_id) {
+          // If it's an object with _id property (populated user)
+          if (typeof recipe.user_id === "object" && recipe.user_id !== null) {
+            const userIdObj = recipe.user_id as any;
+            if (userIdObj._id) {
+              return String(userIdObj._id);
+            }
+            if (userIdObj.id) {
+              return String(userIdObj.id);
+            }
+          }
+          // If it's a string or primitive
           return String(recipe.user_id);
         }
         if ((recipe as any)?.user_id) {
-          return String((recipe as any).user_id);
+          const userIdValue = (recipe as any).user_id;
+          // If it's an object with _id property
+          if (typeof userIdValue === "object" && userIdValue !== null) {
+            if (userIdValue._id) {
+              return String(userIdValue._id);
+            }
+            if (userIdValue.id) {
+              return String(userIdValue.id);
+            }
+          }
+          return String(userIdValue);
         }
         // Try nested user object
         if ((recipe as any)?.user?._id) {
