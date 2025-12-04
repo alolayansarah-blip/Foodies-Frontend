@@ -2,7 +2,7 @@ import { PageSkeleton } from "@/components/skeleton";
 import { ThemedText } from "@/components/themed-text";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
-import { styles } from "@/styles/signUp";
+import { styles } from "@/styles/signIn";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router, useNavigation } from "expo-router";
@@ -24,6 +24,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignUpScreen() {
   const [name, setName] = useState("");
@@ -40,12 +41,9 @@ export default function SignUpScreen() {
   const { register } = useAuth();
 
   // Animation values
-  const mushroom1Y = useSharedValue(0);
-  const mushroom1Rotate = useSharedValue(0);
-  const mushroom2Y = useSharedValue(0);
-  const mushroom2Rotate = useSharedValue(0);
   const formOpacity = useSharedValue(0);
   const formTranslateY = useSharedValue(20);
+  const buttonShine = useSharedValue(0);
 
   // Hide navigation bar
   useEffect(() => {
@@ -56,54 +54,27 @@ export default function SignUpScreen() {
 
   // Start animations
   useEffect(() => {
-    // Mushroom 1 floating and rotating
-    mushroom1Y.value = withRepeat(
-      withTiming(-15, { duration: 3000 }),
-      -1,
-      true
-    );
-    mushroom1Rotate.value = withRepeat(
-      withTiming(10, { duration: 4000 }),
-      -1,
-      true
-    );
-
-    // Mushroom 2 floating and rotating
-    mushroom2Y.value = withRepeat(
-      withTiming(-12, { duration: 3500 }),
-      -1,
-      true
-    );
-    mushroom2Rotate.value = withRepeat(
-      withTiming(-8, { duration: 4500 }),
-      -1,
-      true
-    );
-
     // Form fade in and slide up
     formOpacity.value = withDelay(300, withTiming(1, { duration: 600 }));
     formTranslateY.value = withDelay(300, withSpring(0, { damping: 15 }));
+
+    // Button shine animation
+    buttonShine.value = withRepeat(withTiming(1, { duration: 2000 }), -1, true);
   }, []);
 
   // Animated styles
-  const mushroom1AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: mushroom1Y.value },
-      { rotate: `${mushroom1Rotate.value}deg` },
-    ],
-  }));
-
-  const mushroom2AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: mushroom2Y.value },
-      { rotate: `${mushroom2Rotate.value}deg` },
-    ],
-  }));
-
   const formAnimatedStyle = useAnimatedStyle(() => ({
     opacity: formOpacity.value,
     transform: [{ translateY: formTranslateY.value }],
   }));
+
+  const buttonShineStyle = useAnimatedStyle(() => {
+    const progress = buttonShine.value;
+    return {
+      left: `${(progress - 1) * 200}%`,
+      opacity: progress > 0.5 ? (1 - progress) * 0.5 : progress * 0.5,
+    };
+  });
 
   const handleSignUp = async () => {
     if (!name || !email || !password || !confirmPassword) {
@@ -145,31 +116,15 @@ export default function SignUpScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: "#0d2818" }]}
+      edges={["bottom"]}
+    >
       {/* Creative Background Elements */}
       <View style={styles.backgroundElements}>
         <View style={styles.circle1} />
         <View style={styles.circle2} />
         <View style={styles.circle3} />
-        {/* Mushroom Decorative Element */}
-        <Animated.View
-          style={[styles.mushroomContainer1, mushroom1AnimatedStyle]}
-        >
-          <Image
-            source={require("@/assets/images/mashroom.png")}
-            style={styles.mushroom}
-            contentFit="contain"
-          />
-        </Animated.View>
-        <Animated.View
-          style={[styles.mushroomContainer2, mushroom2AnimatedStyle]}
-        >
-          <Image
-            source={require("@/assets/images/mashroom.png")}
-            style={styles.mushroom}
-            contentFit="contain"
-          />
-        </Animated.View>
       </View>
 
       <KeyboardAvoidingView
@@ -181,18 +136,6 @@ export default function SignUpScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
-            {/* Back Button Header */}
-            <TouchableOpacity
-              style={[styles.backButton, { top: 10 }]}
-              onPress={() => router.back()}
-            >
-              <Ionicons
-                name="arrow-back"
-                size={24}
-                color="rgba(255, 255, 255, 0.9)"
-              />
-            </TouchableOpacity>
-
             {/* Logo with Creative Frame */}
             <View style={styles.logoContainer}>
               <View style={styles.logoFrame}>
@@ -213,13 +156,20 @@ export default function SignUpScreen() {
               <View style={styles.welcomeLine} />
             </View>
 
+            {/* Static Text Under Welcome */}
+            <View style={styles.subtitleContainer}>
+              <ThemedText style={styles.subtitleText}>
+                dash through the dishes
+              </ThemedText>
+            </View>
+
             {/* Form Container */}
             <Animated.View style={[styles.formContainer, formAnimatedStyle]}>
               {/* Name Input */}
               <View style={styles.inputContainer}>
                 <View style={styles.inputLabelContainer}>
                   <MaterialCommunityIcons
-                    name="account-outline"
+                    name="chef-hat"
                     size={16}
                     color="rgba(255, 255, 255, 0.6)"
                   />
@@ -227,7 +177,7 @@ export default function SignUpScreen() {
                 </View>
                 <View style={styles.inputWrapper}>
                   <Ionicons
-                    name="person-outline"
+                    name="restaurant-outline"
                     size={22}
                     color="rgba(255, 255, 255, 0.8)"
                     style={styles.inputIcon}
@@ -248,7 +198,7 @@ export default function SignUpScreen() {
               <View style={styles.inputContainer}>
                 <View style={styles.inputLabelContainer}>
                   <MaterialCommunityIcons
-                    name="email-outline"
+                    name="silverware-fork-knife"
                     size={16}
                     color="rgba(255, 255, 255, 0.6)"
                   />
@@ -256,7 +206,7 @@ export default function SignUpScreen() {
                 </View>
                 <View style={styles.inputWrapper}>
                   <Ionicons
-                    name="mail-outline"
+                    name="restaurant-outline"
                     size={22}
                     color="rgba(255, 255, 255, 0.8)"
                     style={styles.inputIcon}
@@ -278,7 +228,7 @@ export default function SignUpScreen() {
               <View style={styles.inputContainer}>
                 <View style={styles.inputLabelContainer}>
                   <MaterialCommunityIcons
-                    name="lock-outline"
+                    name="chef-hat"
                     size={16}
                     color="rgba(255, 255, 255, 0.6)"
                   />
@@ -286,13 +236,13 @@ export default function SignUpScreen() {
                 </View>
                 <View style={styles.inputWrapper}>
                   <Ionicons
-                    name="lock-closed-outline"
+                    name="fast-food-outline"
                     size={22}
                     color="rgba(255, 255, 255, 0.8)"
                     style={styles.inputIcon}
                   />
                   <TextInput
-                    style={[styles.input, { color: "#080808" }]}
+                    style={styles.input}
                     placeholder="Enter your password"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={password}
@@ -318,7 +268,7 @@ export default function SignUpScreen() {
               <View style={styles.inputContainer}>
                 <View style={styles.inputLabelContainer}>
                   <MaterialCommunityIcons
-                    name="lock-check-outline"
+                    name="chef-hat"
                     size={16}
                     color="rgba(255, 255, 255, 0.6)"
                   />
@@ -328,13 +278,13 @@ export default function SignUpScreen() {
                 </View>
                 <View style={styles.inputWrapper}>
                   <Ionicons
-                    name="lock-closed-outline"
+                    name="fast-food-outline"
                     size={22}
                     color="rgba(255, 255, 255, 0.8)"
                     style={styles.inputIcon}
                   />
                   <TextInput
-                    style={[styles.input, { color: "#080808" }]}
+                    style={styles.input}
                     placeholder="Confirm your password"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={confirmPassword}
@@ -359,8 +309,8 @@ export default function SignUpScreen() {
               </View>
 
               {errorMessage && (
-                <View style={styles.errorContainer}>
-                  <ThemedText style={styles.errorText}>
+                <View style={styles.registerPrompt}>
+                  <ThemedText style={styles.registerPromptText}>
                     {errorMessage}
                   </ThemedText>
                 </View>
@@ -369,24 +319,23 @@ export default function SignUpScreen() {
               {/* Sign Up Button */}
               <TouchableOpacity
                 onPress={handleSignUp}
-                activeOpacity={0.85}
+                activeOpacity={0.9}
                 style={[
                   styles.primaryButton,
                   isSubmitting && styles.primaryButtonDisabled,
                 ]}
                 disabled={isSubmitting}
               >
+                <Animated.View
+                  style={[styles.buttonShineOverlay, buttonShineStyle]}
+                />
                 <View style={styles.buttonContent}>
                   <ThemedText style={styles.primaryButtonText}>
                     {isSubmitting ? "Creating Account..." : "Sign Up"}
                   </ThemedText>
                   {!isSubmitting && (
                     <View style={styles.buttonArrowContainer}>
-                      <Ionicons
-                        name="arrow-forward"
-                        size={18}
-                        color="#1a4d2e"
-                      />
+                      <Ionicons name="restaurant" size={18} color="#0d2818" />
                     </View>
                   )}
                 </View>
@@ -405,6 +354,6 @@ export default function SignUpScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
